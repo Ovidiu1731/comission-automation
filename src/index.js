@@ -98,8 +98,7 @@ function initializeScheduler() {
   
   logger.info('Cron scheduler initialized successfully', {
     schedule: cronSchedule,
-    timezone: 'Europe/Bucharest',
-    nextRun: cron.getSchedules().map(s => s.next().toISOString()).join(', ')
+    timezone: 'Europe/Bucharest'
   });
 }
 
