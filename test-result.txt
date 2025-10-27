@@ -1,9 +1,0 @@
-2025-10-27 16:47:38 [[32minfo[39m]: Airtable connection initialized {"service":"commission-automation","baseId":"appgLJnZqRhQDBLeu"}
-Testing Airtable connection...
-
-Test 1: Fetching monthly commissions...
-   Found:  - Iulie - Role: undefined
-   Found: Rebeca Dodoi - Septembrie - Role: Sales
-   Found: Emanuel Neacsu - Septembrie - Role: Sales
-   Found: AbagiuMario - Octombrie - Role: Caller
-   Found: Simion Mihai - Octombrie - Role: Sales
