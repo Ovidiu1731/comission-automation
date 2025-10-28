@@ -172,10 +172,10 @@ async function processSetterCallerGroup(name, project, group, month, year) {
   try {
     const expenseData = {
       fields: {
-        [FIELDS.EXPENSE_NAME]: `Comision Setter/Caller - ${name}`,
+        [FIELDS.EXPENSE_NAME]: `Comision ${role}`,
         [FIELDS.EXPENSE_PROJECT]: project,
         [FIELDS.EXPENSE_CATEGORY]: category,
-        [FIELDS.EXPENSE_DESCRIPTION]: `Comision Setter/Caller - ${name} (${salesCount} vanzari)`,
+        [FIELDS.EXPENSE_DESCRIPTION]: `${name} - ${month}`,
         [FIELDS.EXPENSE_AMOUNT]: roundedCommission,
         [FIELDS.EXPENSE_VAT_INCLUDED]: VAT_INCLUDED.NO,
         [FIELDS.EXPENSE_DATE]: new Date().toISOString().split('T')[0],
