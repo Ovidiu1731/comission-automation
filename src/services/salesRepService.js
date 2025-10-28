@@ -373,12 +373,17 @@ function groupSalesByProject(sales) {
     if (!groups[project]) {
       groups[project] = {
         total: 0,
-        count: 0
+        count: 0,
+        sales: []
       };
     }
     
     groups[project].total += amount;
     groups[project].count++;
+    groups[project].sales.push({
+      id: sale.id,
+      amount: amount
+    });
   }
   
   return groups;
