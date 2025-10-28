@@ -211,64 +211,86 @@ async function processSalesRepCommission(commission, month, year) {
     return { created: 0, updated: 0, skipped: 1 };
   }
   
-  // Create expense for each individual sale (no proportional allocation)
-  let created = 0;
-  let updated = 0;
-  let skipped = 0;
-  
-  logger.info('About to create expenses for individual sales', { 
-    commissionId, 
-    salesCount: sales.length
-  });
+  // Group sales by project and sum commissions
+  const projectGroups = {};
   
   for (const sale of sales) {
     const project = sale.project;
     const saleCommission = sale.finalCommission || 0;
     
-    logger.info('Processing individual sale', { 
-      commissionId, 
-      saleId: sale.id,
-      project, 
-      commission: saleCommission 
-    });
+    if (!project) {
+      logger.debug('Sale missing project, skipping', { saleId: sale.id });
+      continue;
+    }
     
-    // Skip if project is invalid
     if (!isValidProject(project)) {
-      logger.warn('Invalid project name, skipping sale', {
-        commissionId,
+      logger.debug('Invalid project name, skipping sale', {
         saleId: sale.id,
         project
       });
-      skipped++;
       continue;
     }
     
-    // Skip if commission is invalid
-    if (!isValidExpenseAmount(saleCommission)) {
-      logger.warn('Invalid commission amount for sale, skipping', {
-        commissionId,
+    if (saleCommission <= 0) {
+      logger.debug('Sale commission is zero or invalid, skipping', {
         saleId: sale.id,
         commission: saleCommission
       });
-      skipped++;
       continue;
     }
     
-    // Round to 2 decimal places
-    const roundedCommission = Math.round(saleCommission * 100) / 100;
+    if (!projectGroups[project]) {
+      projectGroups[project] = {
+        totalCommission: 0,
+        salesCount: 0,
+        saleIds: []
+      };
+    }
     
-    // Generate unique expense ID per sale
-    const expenseId = `commission_${commissionId}_${sale.id}`;
+    projectGroups[project].totalCommission += saleCommission;
+    projectGroups[project].salesCount++;
+    projectGroups[project].saleIds.push(sale.id);
+  }
+  
+  if (Object.keys(projectGroups).length === 0) {
+    logger.warn('No valid projects found in sales, skipping', { commissionId });
+    return { created: 0, updated: 0, skipped: 1 };
+  }
+  
+  // Create expense for each project (combining all sales for that project)
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  
+  logger.info('About to create expenses for projects', { 
+    commissionId, 
+    projectCount: Object.keys(projectGroups).length,
+    projects: Object.keys(projectGroups)
+  });
+  
+  for (const [project, group] of Object.entries(projectGroups)) {
+    logger.info('Processing project', { 
+      commissionId, 
+      project, 
+      totalCommission: group.totalCommission,
+      salesCount: group.salesCount
+    });
+    
+    // Round to 2 decimal places
+    const roundedCommission = Math.round(group.totalCommission * 100) / 100;
+    
+    // Generate unique expense ID per project
+    const expenseId = `commission_${commissionId}_${project}`;
     
     // Check if expense already exists
-    logger.info('Checking if expense exists', { commissionId, expenseId, saleId: sale.id });
+    logger.info('Checking if expense exists', { commissionId, expenseId, project });
     const existingExpense = await getExpenseByExpenseId(expenseId);
     
     // Build description
     let description = `${representativeName || name.split(' - ')[0]} - ${month}`;
     
-    // Sale IDs array (just this one sale)
-    const saleIds = [sale.id];
+    // Sale IDs array (all sales for this project)
+    const saleIds = group.saleIds;
     
     // Prepare expense data
     const expenseFields = {
@@ -304,10 +326,10 @@ async function processSalesRepCommission(commission, month, year) {
         
         logger.info('✅ Updated Sales Rep expense', {
           expenseId,
-          saleId: sale.id,
           project,
           oldAmount: existingExpense.amount,
-          newAmount: roundedCommission
+          newAmount: roundedCommission,
+          salesCount: group.salesCount
         });
       } else {
         // Create new expense
@@ -319,9 +341,9 @@ async function processSalesRepCommission(commission, month, year) {
         
         logger.info('✅ Created Sales Rep expense', {
           expenseId,
-          saleId: sale.id,
           project,
-          commission: roundedCommission
+          commission: roundedCommission,
+          salesCount: group.salesCount
         });
       }
     } catch (error) {
