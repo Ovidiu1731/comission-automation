@@ -97,7 +97,7 @@ export const VAT_INCLUDED = {
 
 // Source options
 export const SOURCE = {
-  AUTOMATIC: 'Automatic',
+  AUTOMATIC: 'Automat',
   MANUAL: 'Manual'
 };
 
