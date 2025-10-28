@@ -86,7 +86,7 @@ export const EXPENSE_CATEGORIES = {
 };
 
 // Valid CamelCase name regex for setter/caller validation
-export const SETTER_CALLER_NAME_REGEX = /^[A-Z][a-z]+[A-Z]/;
+export const SETTER_CALLER_NAME_REGEX = /^[A-Z][a-z]+[A-Z][a-z]+$/;
 
 // VAT inclusion option
 export const VAT_INCLUDED = {
