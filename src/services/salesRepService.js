@@ -107,7 +107,7 @@ export async function processSalesRepCommissions() {
  * Allocates commission across projects based on sales proportions
  */
 async function processSalesRepCommission(commission, month, year) {
-  const { id: commissionId, finalCommission, sales: saleIds, name } = commission;
+  const { id: commissionId, finalCommission, sales: saleIds, name, representativeName } = commission;
   
   logger.debug('Processing Sales Rep commission', {
     commissionId,
@@ -214,7 +214,7 @@ async function processSalesRepCommission(commission, month, year) {
     try {
       const expenseData = {
         fields: {
-          [FIELDS.EXPENSE_DESCRIPTION]: `${name} - ${month}`,
+          [FIELDS.EXPENSE_DESCRIPTION]: `${representativeName || name.split(' - ')[0]} - ${month}`,
           [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
           [FIELDS.EXPENSE_PROJECT]: project,
           [FIELDS.EXPENSE_CATEGORY]: EXPENSE_CATEGORIES.REPRESENTATIVES,
