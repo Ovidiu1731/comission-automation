@@ -195,6 +195,9 @@ async function processSetterCallerGroup(name, project, group, month, year) {
   logger.info('  Step 7: Checking if expense exists...');
   const existingExpense = await getExpenseByExpenseId(expenseId);
   
+  // Collect sale IDs for this group
+  const saleIds = group.sales.map(sale => sale.id);
+  
   // Prepare expense data
   const expenseFields = {
     [FIELDS.EXPENSE_DESCRIPTION]: `${name} - ${month}`,
@@ -207,7 +210,8 @@ async function processSetterCallerGroup(name, project, group, month, year) {
     [FIELDS.EXPENSE_MONTH]: month,
     [FIELDS.EXPENSE_YEAR]: year,
     [FIELDS.EXPENSE_SOURCE]: SOURCE.AUTOMATIC,
-    [FIELDS.EXPENSE_ID]: expenseId
+    [FIELDS.EXPENSE_ID]: expenseId,
+    [FIELDS.EXPENSE_ASSOCIATED_SALES]: saleIds
   };
   
   try {

@@ -73,7 +73,8 @@ export const FIELDS = {
   EXPENSE_YEAR: 'An',
   EXPENSE_SOURCE: 'Sursa',
   EXPENSE_ID: 'ID',
-  EXPENSE_LAST_UPDATE: 'Ultima Actualizare'
+  EXPENSE_LAST_UPDATE: 'Ultima Actualizare',
+  EXPENSE_ASSOCIATED_SALES: 'Vanzari Asociate'
 };
 
 // Category options for expenses (must match Airtable "Categorie" field options)
