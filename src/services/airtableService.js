@@ -37,11 +37,14 @@ async function retryWithBackoff(fn, maxAttempts = 3) {
       return await fn();
     } catch (error) {
       if (attempt === maxAttempts) {
-        logger.error('All retry attempts exhausted');
-        logger.error('Error message:', error.message);
-        logger.error('Error type:', error.constructor.name);
-        logger.error('Status code:', error.statusCode);
-        logger.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        logger.error('=== RETRY EXHAUSTED START ===');
+        logger.error('Typeof error:', typeof error);
+        logger.error('Error constructor:', error?.constructor?.name || 'NO CONSTRUCTOR');
+        logger.error('Error message:', error?.message || 'NO MESSAGE');
+        logger.error('Error statusCode:', error?.statusCode || 'NO STATUS CODE');
+        logger.error('Error string:', String(error));
+        logger.error('Error properties:', Object.getOwnPropertyNames(error || {}));
+        logger.error('=== RETRY EXHAUSTED END ===');
         throw error;
       }
       
@@ -336,12 +339,23 @@ export async function createExpense(expenseData) {
     return true;
   } catch (error) {
     // Log error in multiple parts to ensure visibility
-    logger.error('Failed to create expense - Error Message:', error.message);
-    logger.error('Failed to create expense - Error String:', error.toString());
-    logger.error('Failed to create expense - Status Code:', error.statusCode);
-    logger.error('Failed to create expense - Expense ID:', expenseId);
-    logger.error('Failed to create expense - Expense Data:', expenseData);
-    logger.error('Failed to create expense - Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    logger.error('=== CREATE EXPENSE ERROR START ===');
+    logger.error('Error is defined:', error !== undefined);
+    logger.error('Error is null:', error === null);
+    logger.error('Error type:', typeof error);
+    logger.error('Error constructor:', error?.constructor?.name);
+    logger.error('Error message:', error?.message || 'NO MESSAGE');
+    logger.error('Error statusCode:', error?.statusCode || 'NO STATUS CODE');
+    logger.error('Error string:', String(error));
+    logger.error('Expense ID:', expenseId);
+    logger.error('Expense Data:', JSON.stringify(expenseData, null, 2));
+    
+    // Try to log all error properties
+    if (error) {
+      logger.error('Error own properties:', Object.getOwnPropertyNames(error));
+      logger.error('Error keys:', Object.keys(error));
+    }
+    logger.error('=== CREATE EXPENSE ERROR END ===');
     throw error;
   }
 }
