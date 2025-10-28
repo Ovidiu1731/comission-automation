@@ -1,0 +1,17 @@
+2025-10-27 20:53:39 [[32minfo[39m]: Airtable connection initialized {"service":"commission-automation","baseId":"appgLJnZqRhQDBLeu"}
+
+╔════════════════════════════════════════════════════╗
+║   🧪 TESTING WITH REAL AIRTABLE DATA              ║
+╚════════════════════════════════════════════════════╝
+
+📅 Processing: Octombrie 2025
+
+This will process ALL commission data from Airtable...
+
+⏳ This may take a few minutes due to rate limiting...
+
+1️⃣  Processing Sales Rep commissions...
+
+2025-10-27 20:53:39 [[32minfo[39m]: Starting Sales Rep commission processing {"service":"commission-automation","month":"Octombrie","year":2025}
+2025-10-27 20:53:39 [[32minfo[39m]: Fetching monthly commissions {"service":"commission-automation","month":"Octombrie"}
+2025-10-27 20:53:39 [[32minfo[39m]: Fetched monthly commissions {"service":"commission-automation","count":19,"month":"Octombrie"}
