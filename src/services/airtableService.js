@@ -260,7 +260,7 @@ export async function getRepresentativeByName(name) {
           filterByFormula: `FIND("${name}", {${FIELDS.REP_NAME}}) > 0`,
           maxRecords: 10
         })
-        .eachPage((records) => {
+        .eachPage((records, fetchNextPage) => {
           records.forEach(record => {
             results.push({
               id: record.id,
@@ -270,6 +270,7 @@ export async function getRepresentativeByName(name) {
               role: record.get(FIELDS.REP_ROLE)
             });
           });
+          fetchNextPage();
         });
     });
     
