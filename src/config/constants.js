@@ -76,14 +76,13 @@ export const FIELDS = {
   EXPENSE_LAST_UPDATE: 'Ultima Actualizare'
 };
 
-// Category options for expenses
+// Category options for expenses (must match Airtable "Categorie" field options)
 export const EXPENSE_CATEGORIES = {
   REPRESENTATIVES: 'Reprezentanți',
   CALLER: 'Caller',
   SETTER: 'Setter',
-  TEAM_LEADER_SALES: 'Team Leader Vânzări',
-  TEAM_LEADER_SETTER: 'Team Leader Setter',
-  TEAM_LEADER_CALLER: 'Team Leader Caller'
+  TEAM_LEADER: 'Team Leader',
+  UNKNOWN: 'Unknown'
 };
 
 // Valid CamelCase name regex for setter/caller validation
