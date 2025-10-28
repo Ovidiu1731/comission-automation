@@ -138,7 +138,7 @@ export async function getSalesByIds(saleIds) {
             filterByFormula: `OR(${batch.map(id => `RECORD_ID() = "${id}"`).join(', ')})`,
             maxRecords: 100
           })
-          .eachPage((records) => {
+          .eachPage((records, fetchNextPage) => {
             records.forEach(record => {
               results.push({
                 id: record.id,
@@ -150,6 +150,7 @@ export async function getSalesByIds(saleIds) {
                 monthYear: record.get(FIELDS.SALE_MONTH)
               });
             });
+            fetchNextPage();
           });
       });
     }
