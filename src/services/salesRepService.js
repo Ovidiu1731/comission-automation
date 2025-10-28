@@ -13,6 +13,7 @@ import {
 import {
   FIELDS,
   EXPENSE_CATEGORIES,
+  EXPENSE_TYPES,
   VAT_INCLUDED,
   SOURCE,
   getCurrentRomanianMonth,
