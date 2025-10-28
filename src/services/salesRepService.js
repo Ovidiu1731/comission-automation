@@ -355,7 +355,7 @@ function groupSalesByProject(sales) {
   
   for (const sale of sales) {
     const project = sale.project;
-    const amount = sale.amountWithoutVat || 0;
+    const amount = sale.finalCommission || 0;
     
     if (!project) {
       logger.debug('Sale missing project, skipping', { saleId: sale.id });
@@ -363,7 +363,7 @@ function groupSalesByProject(sales) {
     }
     
     if (amount <= 0) {
-      logger.debug('Sale amount is zero or invalid, skipping', {
+      logger.debug('Sale commission is zero or invalid, skipping', {
         saleId: sale.id,
         amount
       });

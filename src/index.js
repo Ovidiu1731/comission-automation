@@ -84,9 +84,9 @@ async function processCommissions() {
  * Initialize cron schedule
  */
 function initializeScheduler() {
-  // Daily at 6:20 PM Romania time - TESTING LINKED SALES FIX
+  // Daily at 6:45 PM Romania time - TESTING COMMISSION ALLOCATION FIX
   // Romania timezone is UTC+2 (EET) or UTC+3 (EEST)
-  const cronSchedule = process.env.CRON_SCHEDULE || '20 18 * * *'; // 6:20 PM Romania time
+  const cronSchedule = process.env.CRON_SCHEDULE || '45 18 * * *'; // 6:45 PM Romania time
   
   logger.info('Initializing cron scheduler', { schedule: cronSchedule });
   
