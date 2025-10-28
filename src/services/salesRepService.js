@@ -211,72 +211,64 @@ async function processSalesRepCommission(commission, month, year) {
     return { created: 0, updated: 0, skipped: 1 };
   }
   
-  logger.info('About to group sales by project', { commissionId, salesCount: sales.length });
-  // Group sales by project and calculate totals
-  const projectGroups = groupSalesByProject(sales);
-  logger.info('Grouped sales by project', { commissionId, projectCount: Object.keys(projectGroups).length });
-  
-  if (Object.keys(projectGroups).length === 0) {
-    logger.warn('No valid projects found in sales, skipping', { commissionId });
-    return { created: 0, updated: 0, skipped: 1 };
-  }
-  
-  // Calculate total sales across all projects
-  const totalSales = Object.values(projectGroups).reduce(
-    (sum, group) => sum + group.total,
-    0
-  );
-  
-  if (totalSales === 0) {
-    logger.warn('Total sales is zero, skipping', { commissionId });
-    return { created: 0, updated: 0, skipped: 1 };
-  }
-  
-  // Create expense for each project allocation
+  // Create expense for each individual sale (no proportional allocation)
   let created = 0;
   let updated = 0;
   let skipped = 0;
   
-  logger.info('About to create expenses for projects', { 
+  logger.info('About to create expenses for individual sales', { 
     commissionId, 
-    projectCount: Object.keys(projectGroups).length,
-    projects: Object.keys(projectGroups)
+    salesCount: sales.length
   });
   
-  for (const [project, group] of Object.entries(projectGroups)) {
-    logger.info('Processing project allocation', { commissionId, project, salesInProject: group.count });
+  for (const sale of sales) {
+    const project = sale.project;
+    const saleCommission = sale.finalCommission || 0;
+    
+    logger.info('Processing individual sale', { 
+      commissionId, 
+      saleId: sale.id,
+      project, 
+      commission: saleCommission 
+    });
+    
     // Skip if project is invalid
     if (!isValidProject(project)) {
-      logger.warn('Invalid project name, skipping allocation', {
+      logger.warn('Invalid project name, skipping sale', {
         commissionId,
+        saleId: sale.id,
         project
       });
       skipped++;
       continue;
     }
     
-    // Calculate proportional allocation using NET commission (after debt deduction)
-    const allocationPercentage = (group.total / totalSales) * 100;
-    const allocatedCommission = (netCommission * group.total) / totalSales;
-    
-    // Round to 2 decimal places
-    const roundedCommission = Math.round(allocatedCommission * 100) / 100;
-    
-    // Generate unique expense ID
-    const expenseId = `commission_${commissionId}_${project}`;
-    
-    // Check if expense already exists
-    logger.info('Checking if expense exists', { commissionId, expenseId, project });
-    const existingExpense = await getExpenseByExpenseId(expenseId);
-    
-    // Build description with debt info if applicable
-    let description = `${representativeName || name.split(' - ')[0]} - ${month}`;
-    if (debtInfo) {
-      description += ` (Comision: ${debtInfo.originalCommission.toFixed(2)} RON - Datorie: ${debtInfo.totalDebt.toFixed(2)} RON = Net: ${debtInfo.netCommission.toFixed(2)} RON)`;
+    // Skip if commission is invalid
+    if (!isValidExpenseAmount(saleCommission)) {
+      logger.warn('Invalid commission amount for sale, skipping', {
+        commissionId,
+        saleId: sale.id,
+        commission: saleCommission
+      });
+      skipped++;
+      continue;
     }
     
-    // Collect sale IDs for this project
-    const saleIds = group.sales.map(sale => sale.id);
+    // Round to 2 decimal places
+    const roundedCommission = Math.round(saleCommission * 100) / 100;
+    
+    // Generate unique expense ID per sale
+    const expenseId = `commission_${commissionId}_${sale.id}`;
+    
+    // Check if expense already exists
+    logger.info('Checking if expense exists', { commissionId, expenseId, saleId: sale.id });
+    const existingExpense = await getExpenseByExpenseId(expenseId);
+    
+    // Build description
+    let description = `${representativeName || name.split(' - ')[0]} - ${month}`;
+    
+    // Sale IDs array (just this one sale)
+    const saleIds = [sale.id];
     
     // Prepare expense data
     const expenseFields = {
@@ -312,11 +304,10 @@ async function processSalesRepCommission(commission, month, year) {
         
         logger.info('✅ Updated Sales Rep expense', {
           expenseId,
+          saleId: sale.id,
           project,
           oldAmount: existingExpense.amount,
-          newAmount: roundedCommission,
-          allocationPercentage: allocationPercentage.toFixed(2) + '%',
-          salesInProject: group.count
+          newAmount: roundedCommission
         });
       } else {
         // Create new expense
@@ -328,10 +319,9 @@ async function processSalesRepCommission(commission, month, year) {
         
         logger.info('✅ Created Sales Rep expense', {
           expenseId,
+          saleId: sale.id,
           project,
-          allocatedCommission: roundedCommission,
-          allocationPercentage: allocationPercentage.toFixed(2) + '%',
-          salesInProject: group.count
+          commission: roundedCommission
         });
       }
     } catch (error) {
@@ -347,45 +337,4 @@ async function processSalesRepCommission(commission, month, year) {
   return { created, updated, skipped };
 }
 
-/**
- * Group sales by project and calculate totals
- */
-function groupSalesByProject(sales) {
-  const groups = {};
-  
-  for (const sale of sales) {
-    const project = sale.project;
-    const amount = sale.finalCommission || 0;
-    
-    if (!project) {
-      logger.debug('Sale missing project, skipping', { saleId: sale.id });
-      continue;
-    }
-    
-    if (amount <= 0) {
-      logger.debug('Sale commission is zero or invalid, skipping', {
-        saleId: sale.id,
-        amount
-      });
-      continue;
-    }
-    
-    if (!groups[project]) {
-      groups[project] = {
-        total: 0,
-        count: 0,
-        sales: []
-      };
-    }
-    
-    groups[project].total += amount;
-    groups[project].count++;
-    groups[project].sales.push({
-      id: sale.id,
-      amount: amount
-    });
-  }
-  
-  return groups;
-}
 
