@@ -153,15 +153,22 @@ export async function getSalesByIds(saleIds) {
           .eachPage((records, fetchNextPage) => {
             logger.info('eachPage callback called', { recordCount: records.length });
             records.forEach(record => {
-              results.push({
+              const saleData = {
                 id: record.id,
                 project: record.get(FIELDS.PROJECT),
                 amountWithoutVat: record.get(FIELDS.AMOUNT_WITHOUT_VAT),
                 totalAmount: record.get(FIELDS.TOTAL_AMOUNT),
+                finalCommission: record.get(FIELDS.FINAL_COMMISSION_SALE),
                 utmCampaign: record.get(FIELDS.UTM_CAMPAIGN),
                 saleDate: record.get(FIELDS.SALE_DATE),
                 monthYear: record.get(FIELDS.SALE_MONTH)
+              };
+              logger.debug('Fetched sale with commission', {
+                id: saleData.id,
+                project: saleData.project,
+                commission: saleData.finalCommission
               });
+              results.push(saleData);
             });
             logger.info('About to call fetchNextPage');
             fetchNextPage();
