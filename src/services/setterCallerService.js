@@ -219,8 +219,9 @@ async function processSetterCallerCommission(commission, month, year) {
     const saleIds = group.sales.map(sale => sale.id);
     
     // Prepare expense data
+    // Note: 'name' already includes the month (e.g., "AbagiuMario - Octombrie")
     const expenseFields = {
-      [FIELDS.EXPENSE_DESCRIPTION]: `${name} - ${month}`,
+      [FIELDS.EXPENSE_DESCRIPTION]: name,
       [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
       [FIELDS.EXPENSE_PROJECT]: project,
       [FIELDS.EXPENSE_CATEGORY]: category,
