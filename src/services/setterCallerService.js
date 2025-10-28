@@ -121,8 +121,10 @@ async function processSetterCallerGroup(name, project, group, month, year) {
   const { totalCommission, salesCount } = group;
   
   logger.info(`>>> processSetterCallerGroup called: ${name} - ${project}`);
+  logger.info(`  Commission: ${totalCommission}, Sales: ${salesCount}`);
   
   // Validate project
+  logger.info('  Step 1: Validating project...');
   if (!isValidProject(project)) {
     logger.warn('Invalid project name, skipping', {
       name,
@@ -130,8 +132,10 @@ async function processSetterCallerGroup(name, project, group, month, year) {
     });
     return { created: 0, skipped: 1 };
   }
+  logger.info('  ✓ Project valid');
   
   // Validate commission amount
+  logger.info('  Step 2: Validating commission amount...');
   if (!isValidExpenseAmount(totalCommission)) {
     logger.warn('Invalid commission amount, skipping', {
       name,
@@ -140,14 +144,20 @@ async function processSetterCallerGroup(name, project, group, month, year) {
     });
     return { created: 0, skipped: 1 };
   }
+  logger.info('  ✓ Commission amount valid');
   
   // Round to 2 decimal places
+  logger.info('  Step 3: Rounding commission...');
   const roundedCommission = Math.round(totalCommission * 100) / 100;
+  logger.info(`  ✓ Rounded commission: ${roundedCommission}`);
   
   // Look up role from Reprezentanți table
+  logger.info('  Step 4: Looking up role...');
   const role = await lookupSetterCallerRole(name);
+  logger.info(`  ✓ Role found: ${role}`);
   
   // Determine expense category based on role
+  logger.info('  Step 5: Determining category...');
   let category;
   if (role === 'Caller') {
     category = EXPENSE_CATEGORIES.CALLER;
@@ -161,14 +171,19 @@ async function processSetterCallerGroup(name, project, group, month, year) {
     });
     category = EXPENSE_CATEGORIES.SETTER;
   }
+  logger.info(`  ✓ Category: ${category}`);
   
   // Generate unique expense ID
+  logger.info('  Step 6: Generating expense ID...');
   const expenseId = `setter_caller_${name}_${project}_${month.toLowerCase()}`;
+  logger.info(`  ✓ Expense ID: ${expenseId}`);
   
   // Check if expense already exists
+  logger.info('  Step 7: Checking if expense exists...');
   const exists = await expenseExists(expenseId);
+  logger.info(`  ✓ Exists check: ${exists}`);
   if (exists) {
-    logger.debug('Expense already exists, skipping', {
+    logger.info('Expense already exists, skipping', {
       expenseId,
       name,
       project,
@@ -178,6 +193,7 @@ async function processSetterCallerGroup(name, project, group, month, year) {
   }
   
   // Create expense record
+  logger.info('  Step 8: Creating expense...');
   try {
     const expenseData = {
       fields: {
