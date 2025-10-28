@@ -124,6 +124,69 @@ export async function getMonthlyCommissions(month) {
 }
 
 /**
+ * Get all monthly commission records for Setters/Callers for current month
+ * Filtered by role = "Caller" or "Setter"
+ */
+export async function getMonthlySetterCallerCommissions(month) {
+  logger.info('Fetching monthly Setter/Caller commissions', { month });
+  
+  try {
+    const results = [];
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.MONTHLY_COMMISSIONS)
+        .select({
+          filterByFormula: `{${FIELDS.MONTH}} = "${month}"`,
+          maxRecords: 1000
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            const role = record.get(FIELDS.ROLE);
+            const setterCallerCommission = record.get(FIELDS.SETTER_CALLER_SUM);
+            
+            // Only include if role contains "Caller" or "Setter" and has valid commission
+            const roles = Array.isArray(role) ? role : [role];
+            const isSetterCaller = roles.some(r => r === 'Caller' || r === 'Setter');
+            
+            if (isSetterCaller && setterCallerCommission > 0) {
+              results.push({
+                id: record.id,
+                name: record.get(FIELDS.NAME),
+                representative: record.get(FIELDS.REPRESENTATIVE),
+                month: record.get(FIELDS.MONTH),
+                setterCallerCommission: setterCallerCommission,
+                sales: record.get(FIELDS.SALES) || [],
+                role: roles
+              });
+            } else {
+              logger.debug('Skipping commission - not Setter/Caller or zero commission', {
+                id: record.id,
+                role: roles,
+                commission: setterCallerCommission
+              });
+            }
+          });
+          
+          fetchNextPage();
+        });
+    });
+    
+    logger.info('Fetched monthly Setter/Caller commissions', { 
+      count: results.length,
+      month 
+    });
+    
+    return results;
+  } catch (error) {
+    logger.error('Failed to fetch monthly Setter/Caller commissions', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
  * Get sale records by their IDs
  */
 export async function getSalesByIds(saleIds) {
