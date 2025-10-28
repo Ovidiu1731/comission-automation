@@ -63,21 +63,34 @@ export async function processSetterCallerCommissions() {
     let skipped = 0;
     let errors = 0;
     
+    logger.info('=== STARTING TO PROCESS GROUPS ===');
+    logger.info(`Will process ${Object.keys(groupedSales).length} groups`);
+    
     // Process each group
+    let groupIndex = 0;
     for (const [key, group] of Object.entries(groupedSales)) {
+      groupIndex++;
+      logger.info(`[${groupIndex}/${Object.keys(groupedSales).length}] Processing group: ${key}`);
+      
       try {
         const [name, project] = key.split('||');
+        logger.info(`  Name: ${name}, Project: ${project}, Commission: ${group.totalCommission}`);
+        
         const result = await processSetterCallerGroup(name, project, group, month, year);
+        
+        logger.info(`  Result: created=${result.created}, skipped=${result.skipped}`);
         created += result.created;
         skipped += result.skipped;
       } catch (error) {
-        logger.error('Failed to process Setter/Caller group', {
-          key,
-          error: error.message
+        logger.error(`  ERROR processing group ${key}:`, {
+          error: error.message,
+          stack: error.stack
         });
         errors++;
       }
     }
+    
+    logger.info('=== FINISHED PROCESSING ALL GROUPS ===');
     
     logger.info('Completed Setter/Caller commission processing', {
       totalGroupings: Object.keys(groupedSales).length,
@@ -107,12 +120,7 @@ export async function processSetterCallerCommissions() {
 async function processSetterCallerGroup(name, project, group, month, year) {
   const { totalCommission, salesCount } = group;
   
-  logger.debug('Processing Setter/Caller group', {
-    name,
-    project,
-    totalCommission,
-    salesCount
-  });
+  logger.info(`>>> processSetterCallerGroup called: ${name} - ${project}`);
   
   // Validate project
   if (!isValidProject(project)) {
