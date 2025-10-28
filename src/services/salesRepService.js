@@ -142,8 +142,10 @@ async function processSalesRepCommission(commission, month, year) {
     return { created: 0, skipped: 1 };
   }
   
+  logger.info('About to group sales by project', { commissionId, salesCount: sales.length });
   // Group sales by project and calculate totals
   const projectGroups = groupSalesByProject(sales);
+  logger.info('Grouped sales by project', { commissionId, projectCount: Object.keys(projectGroups).length });
   
   if (Object.keys(projectGroups).length === 0) {
     logger.warn('No valid projects found in sales, skipping', { commissionId });
@@ -165,7 +167,14 @@ async function processSalesRepCommission(commission, month, year) {
   let created = 0;
   let skipped = 0;
   
+  logger.info('About to create expenses for projects', { 
+    commissionId, 
+    projectCount: Object.keys(projectGroups).length,
+    projects: Object.keys(projectGroups)
+  });
+  
   for (const [project, group] of Object.entries(projectGroups)) {
+    logger.info('Processing project allocation', { commissionId, project, salesInProject: group.count });
     // Skip if project is invalid
     if (!isValidProject(project)) {
       logger.warn('Invalid project name, skipping allocation', {
@@ -187,7 +196,9 @@ async function processSalesRepCommission(commission, month, year) {
     const expenseId = `commission_${commissionId}_${project}`;
     
     // Check if expense already exists
+    logger.info('Checking if expense exists', { commissionId, expenseId, project });
     const exists = await expenseExists(expenseId);
+    logger.info('Expense existence checked', { commissionId, expenseId, exists });
     if (exists) {
       logger.debug('Expense already exists, skipping', {
         expenseId,

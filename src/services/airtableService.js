@@ -272,18 +272,23 @@ export async function getRepresentativeByName(name) {
  * Check if expense already exists by ID
  */
 export async function expenseExists(expenseId) {
+  logger.info('expenseExists called', { expenseId });
   try {
     let exists = false;
     
     await retryWithBackoff(async () => {
+      logger.info('About to check expense existence in Airtable', { expenseId });
       await base(TABLES.EXPENSES)
         .select({
           filterByFormula: `{${FIELDS.EXPENSE_ID}} = "${expenseId}"`,
           maxRecords: 1
         })
-        .eachPage((records) => {
+        .eachPage((records, fetchNextPage) => {
+          logger.info('expenseExists eachPage called', { recordCount: records.length });
           exists = records.length > 0;
+          fetchNextPage();
         });
+      logger.info('Expense check complete', { expenseId, exists });
     });
     
     return exists;
