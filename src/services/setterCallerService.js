@@ -271,23 +271,19 @@ function groupSalesBySetterCallerAndProject(sales) {
     const name = extractSetterCallerName(utmCampaign);
     
     if (!name) {
-      logger.debug('Invalid Utm Campaign name, skipping', {
-        saleId: sale.id,
-        utmCampaign
-      });
+      logger.warn(`SKIPPED - No valid name found in Utm Campaign: "${utmCampaign}"`);
       skippedCount++;
       continue;
     }
     
     // Validate name format
     if (!isValidSetterCallerName(name)) {
-      logger.debug('Name does not match required format, skipping', {
-        saleId: sale.id,
-        name
-      });
+      logger.warn(`SKIPPED - Name "${name}" does not match regex /^[A-Z][a-z]+[A-Z][a-z]+$/`);
       skippedCount++;
       continue;
     }
+    
+    logger.info(`VALID - Extracted name "${name}" from Utm Campaign "${utmCampaign}"`);
     
     // Create group key: name||project
     const key = `${name}||${project}`;
@@ -311,11 +307,27 @@ function groupSalesBySetterCallerAndProject(sales) {
     });
   }
   
-  logger.info('Grouped Setter/Caller sales by name and project', {
-    uniqueGroupings: Object.keys(groups).length,
-    totalSales: sales.length,
-    skippedSales: skippedCount
-  });
+  logger.info('=== GROUPING RESULTS ===');
+  logger.info(`Total sales to process: ${sales.length}`);
+  logger.info(`Valid groupings created: ${Object.keys(groups).length}`);
+  logger.info(`Sales skipped: ${skippedCount}`);
+  
+  if (Object.keys(groups).length > 0) {
+    logger.info('Sample group (first):');
+    const firstKey = Object.keys(groups)[0];
+    const firstGroup = groups[firstKey];
+    logger.info(`  Key: ${firstKey}`);
+    logger.info(`  Name: ${firstGroup.name}`);
+    logger.info(`  Project: ${firstGroup.project}`);
+    logger.info(`  Total Commission: ${firstGroup.totalCommission}`);
+    logger.info(`  Sales Count: ${firstGroup.salesCount}`);
+  } else {
+    logger.warn('NO VALID GROUPINGS CREATED');
+    logger.warn('All sales were filtered out. Common reasons:');
+    logger.warn('1. Utm Campaign names do not match regex pattern');
+    logger.warn('2. Invalid project names');
+    logger.warn('3. Zero commission amounts');
+  }
   
   return groups;
 }

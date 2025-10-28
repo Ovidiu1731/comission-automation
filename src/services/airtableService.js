@@ -217,10 +217,23 @@ export async function getSetterCallerSales(monthYear) {
         });
     });
     
-    logger.info('Fetched sales for setter/caller processing', {
-      count: results.length,
-      monthYear
-    });
+    logger.info('=== SETTER/CALLER SALES FETCH COMPLETE ===');
+    logger.info(`Total sales fetched: ${results.length}`);
+    logger.info(`Month/Year filter: ${monthYear}`);
+    
+    if (results.length > 0) {
+      logger.info('Sample sale (first record):');
+      logger.info(`  ID: ${results[0].id}`);
+      logger.info(`  Project: ${results[0].project}`);
+      logger.info(`  Utm Campaign: ${results[0].utmCampaign}`);
+      logger.info(`  Setter/Caller Commission: ${results[0].setterCallerCommission}`);
+    } else {
+      logger.warn('NO SALES FOUND FOR SETTER/CALLER PROCESSING');
+      logger.warn('This could mean:');
+      logger.warn('1. No sales have non-zero Setter/Caller commission');
+      logger.warn('2. No sales have Utm Campaign filled in');
+      logger.warn('3. Month/year filter is incorrect');
+    }
     
     return results;
   } catch (error) {
