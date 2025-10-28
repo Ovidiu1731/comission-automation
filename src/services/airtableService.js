@@ -37,6 +37,12 @@ async function retryWithBackoff(fn, maxAttempts = 3) {
       return await fn();
     } catch (error) {
       if (attempt === maxAttempts) {
+        logger.error('All retry attempts exhausted', {
+          error: error.message,
+          errorString: error.toString(),
+          statusCode: error.statusCode,
+          attempts: maxAttempts
+        });
         throw error;
       }
       
@@ -45,7 +51,8 @@ async function retryWithBackoff(fn, maxAttempts = 3) {
         attempt,
         maxAttempts,
         delay: `${delay}ms`,
-        error: error.message
+        error: error.message,
+        statusCode: error.statusCode
       });
       
       await new Promise(resolve => setTimeout(resolve, delay));
