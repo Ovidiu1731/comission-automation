@@ -75,30 +75,51 @@ export function isValidProject(project) {
 
 /**
  * Extract setter/caller name from Utm Campaign field
- * Returns null if invalid
+ * Now returns the extracted string (not validated yet)
+ * Validation and normalization happens via fuzzy lookup
  * 
  * @param {string} utmCampaign - Value from Utm Campaign field
- * @returns {string|null} - Valid name or null
+ * @returns {string|null} - Extracted name candidate or null
  */
 export function extractSetterCallerName(utmCampaign) {
   if (!utmCampaign) {
     return null;
   }
   
-  // Split by common separators (comma, semicolon, pipe, dash)
-  const candidates = utmCampaign.split(/[,;|\-\n]/)
+  // Clean and normalize the input
+  const cleaned = utmCampaign.trim();
+  
+  if (cleaned.length === 0) {
+    return null;
+  }
+  
+  // Split by common separators (comma, semicolon, pipe, dash, newline)
+  const candidates = cleaned.split(/[,;|\-\n]/)
     .map(s => s.trim())
     .filter(s => s.length > 0);
   
-  // Find first valid name
+  // Try each candidate - first one that passes basic validation
   for (const candidate of candidates) {
-    if (isValidSetterCallerName(candidate)) {
-      logger.debug('Extracted valid name from Utm Campaign', { 
+    // Basic validation: at least 3 chars, not all numbers, not common codes
+    if (candidate.length >= 3 && 
+        !/^\d+$/.test(candidate) &&  // not all digits
+        !['chat', 'link', 'bio', 'story', 'web', 'igo', 'fba', 'nws'].includes(candidate.toLowerCase())) {
+      
+      logger.debug('Extracted name candidate from Utm Campaign', { 
         utmCampaign, 
         extractedName: candidate 
       });
       return candidate;
     }
+  }
+  
+  // If no separator found, try the whole string
+  if (candidates.length === 1 && cleaned.length >= 3) {
+    logger.debug('Using whole Utm Campaign as name candidate', { 
+      utmCampaign, 
+      extractedName: cleaned 
+    });
+    return cleaned;
   }
   
   return null;

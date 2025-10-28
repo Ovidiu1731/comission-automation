@@ -292,6 +292,168 @@ export async function getRepresentativeByName(name) {
 }
 
 /**
+ * Find representative by fuzzy name match (case-insensitive, partial match)
+ * Used for normalizing setter/caller names from Utm Campaign
+ * @returns {Object|null} - Object with {name, role} or null if not found
+ */
+export async function findRepresentativeByFuzzyName(searchName) {
+  if (!searchName || typeof searchName !== 'string') {
+    return null;
+  }
+  
+  const normalizedSearch = searchName.toLowerCase().trim();
+  
+  logger.debug('Searching for representative with fuzzy match', { 
+    searchName, 
+    normalizedSearch 
+  });
+  
+  try {
+    const allRepresentatives = [];
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.REPRESENTATIVES)
+        .select({
+          maxRecords: 500
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            const name = record.get(FIELDS.REP_NAME);
+            const role = record.get(FIELDS.REP_ROLE);
+            
+            // Only include Callers and Setters
+            if (name && (role === 'Caller' || role === 'Setter')) {
+              allRepresentatives.push({
+                id: record.id,
+                name: name,
+                role: role,
+                normalizedName: name.toLowerCase()
+              });
+            }
+          });
+          
+          fetchNextPage();
+        });
+    });
+    
+    logger.info(`Found ${allRepresentatives.length} Callers/Setters to check against`);
+    
+    // 1. Try exact match (case-insensitive)
+    let match = allRepresentatives.find(rep => 
+      rep.normalizedName === normalizedSearch
+    );
+    
+    if (match) {
+      logger.info('Found exact fuzzy match', {
+        searchName,
+        matchedName: match.name,
+        role: match.role
+      });
+      return { name: match.name, role: match.role };
+    }
+    
+    // 2. Try partial match: name contains search or search contains name
+    match = allRepresentatives.find(rep => 
+      rep.normalizedName.includes(normalizedSearch) || 
+      normalizedSearch.includes(rep.normalizedName)
+    );
+    
+    if (match) {
+      logger.info('Found partial fuzzy match', {
+        searchName,
+        matchedName: match.name,
+        role: match.role
+      });
+      return { name: match.name, role: match.role };
+    }
+    
+    // 3. Try similarity match for typos (e.g., OpescuEric vs OprescuEric)
+    const closeMatches = allRepresentatives.filter(rep => {
+      const similarity = calculateSimilarity(rep.normalizedName, normalizedSearch);
+      // Accept if 85% or more similar (allows 1-2 char differences)
+      return similarity >= 0.85 && similarity < 1.0;
+    });
+    
+    if (closeMatches.length === 1) {
+      match = closeMatches[0];
+      logger.info('Found similar fuzzy match (possible typo)', {
+        searchName,
+        matchedName: match.name,
+        role: match.role
+      });
+      return { name: match.name, role: match.role };
+    }
+    
+    if (closeMatches.length > 1) {
+      logger.warn('Multiple similar matches found, cannot determine correct one', {
+        searchName,
+        matches: closeMatches.map(m => m.name)
+      });
+    }
+    
+    logger.warn('No fuzzy match found for setter/caller name', {
+      searchName,
+      representativesChecked: allRepresentatives.length
+    });
+    
+    return null;
+  } catch (error) {
+    logger.error('Failed to perform fuzzy name search', {
+      searchName,
+      error: error.message
+    });
+    return null;
+  }
+}
+
+/**
+ * Calculate string similarity using Levenshtein distance
+ * Returns value between 0 (completely different) and 1 (identical)
+ */
+function calculateSimilarity(str1, str2) {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  
+  if (longer.length === 0) {
+    return 1.0;
+  }
+  
+  const editDistance = getEditDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+}
+
+/**
+ * Calculate Levenshtein distance (edit distance) between two strings
+ */
+function getEditDistance(str1, str2) {
+  const matrix = [];
+  
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+  
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+  
+  return matrix[str2.length][str1.length];
+}
+
+/**
  * Check if expense already exists by ID
  */
 export async function expenseExists(expenseId) {
@@ -370,6 +532,144 @@ export async function createExpense(expenseData) {
       logger.error('Error keys:', Object.keys(error));
     }
     logger.error('=== CREATE EXPENSE ERROR END ===');
+    throw error;
+  }
+}
+
+/**
+ * Get representative's outstanding debts from previous months
+ * Returns all commission records with negative finalCommission
+ * @param {string} representativeId - The representative's record ID
+ * @param {string} currentMonth - Current month to exclude (e.g., "Octombrie")
+ * @returns {Array} Array of debt records with {id, month, amount}
+ */
+export async function getRepresentativeDebts(representativeId, currentMonth) {
+  logger.debug('Fetching representative debts', { representativeId, currentMonth });
+  
+  try {
+    const results = [];
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.MONTHLY_COMMISSIONS)
+        .select({
+          filterByFormula: `AND(
+            {${FIELDS.REPRESENTATIVE}} = "${representativeId}",
+            {${FIELDS.FINAL_COMMISSION}} < 0,
+            {${FIELDS.MONTH}} != "${currentMonth}"
+          )`,
+          maxRecords: 100,
+          sort: [{ field: FIELDS.MONTH, direction: 'asc' }]
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            const finalCommission = record.get(FIELDS.FINAL_COMMISSION);
+            if (finalCommission && finalCommission < 0) {
+              results.push({
+                id: record.id,
+                month: record.get(FIELDS.MONTH),
+                amount: finalCommission,  // negative value
+                name: record.get(FIELDS.NAME),
+                representative: record.get(FIELDS.REPRESENTATIVE)
+              });
+            }
+          });
+          
+          fetchNextPage();
+        });
+    });
+    
+    if (results.length > 0) {
+      logger.info('Found outstanding debts for representative', {
+        representativeId,
+        debtCount: results.length,
+        totalDebt: results.reduce((sum, d) => sum + d.amount, 0)
+      });
+    }
+    
+    return results;
+  } catch (error) {
+    logger.error('Failed to fetch representative debts', {
+      representativeId,
+      error: error.message
+    });
+    return [];
+  }
+}
+
+/**
+ * Get expense record by expense ID
+ * Returns the full record including Airtable record ID
+ */
+export async function getExpenseByExpenseId(expenseId) {
+  logger.debug('Fetching expense by expense ID', { expenseId });
+  
+  try {
+    const results = [];
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.EXPENSES)
+        .select({
+          filterByFormula: `{${FIELDS.EXPENSE_ID}} = "${expenseId}"`,
+          maxRecords: 1
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            results.push({
+              id: record.id,
+              expenseId: record.get(FIELDS.EXPENSE_ID),
+              amount: record.get(FIELDS.EXPENSE_AMOUNT),
+              description: record.get(FIELDS.EXPENSE_DESCRIPTION),
+              project: record.get(FIELDS.EXPENSE_PROJECT),
+              category: record.get(FIELDS.EXPENSE_CATEGORY),
+              type: record.get(FIELDS.EXPENSE_TYPE)
+            });
+          });
+          
+          fetchNextPage();
+        });
+    });
+    
+    return results.length > 0 ? results[0] : null;
+  } catch (error) {
+    logger.error('Failed to fetch expense by expense ID', {
+      expenseId,
+      error: error.message
+    });
+    return null;
+  }
+}
+
+/**
+ * Update existing expense record
+ * Updates amount and description
+ */
+export async function updateExpense(recordId, updateData) {
+  logger.info('Updating expense record', { 
+    recordId,
+    updateFields: Object.keys(updateData.fields || {})
+  });
+  
+  try {
+    await retryWithBackoff(async () => {
+      await base(TABLES.EXPENSES).update([{
+        id: recordId,
+        fields: updateData.fields
+      }]);
+    });
+    
+    logger.info('Updated expense record', { 
+      recordId,
+      amount: updateData.fields?.[FIELDS.EXPENSE_AMOUNT],
+      description: updateData.fields?.[FIELDS.EXPENSE_DESCRIPTION]
+    });
+    
+    return true;
+  } catch (error) {
+    logger.error('Failed to update expense', {
+      recordId,
+      error: error.message,
+      updateData: JSON.stringify(updateData, null, 2)
+    });
     throw error;
   }
 }
