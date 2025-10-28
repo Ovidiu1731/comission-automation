@@ -213,10 +213,10 @@ async function processSalesRepCommission(commission, month, year) {
     try {
       const expenseData = {
         fields: {
-          [FIELDS.EXPENSE_NAME]: 'Comision Reprezentant',
+          [FIELDS.EXPENSE_DESCRIPTION]: `${name} - ${month}`,
+          [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
           [FIELDS.EXPENSE_PROJECT]: project,
           [FIELDS.EXPENSE_CATEGORY]: EXPENSE_CATEGORIES.REPRESENTATIVES,
-          [FIELDS.EXPENSE_DESCRIPTION]: `${name} - ${month}`,
           [FIELDS.EXPENSE_AMOUNT]: roundedCommission,
           [FIELDS.EXPENSE_VAT_INCLUDED]: VAT_INCLUDED.NO,
           [FIELDS.EXPENSE_DATE]: new Date().toISOString().split('T')[0],

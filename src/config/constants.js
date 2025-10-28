@@ -62,10 +62,10 @@ export const FIELDS = {
   REP_MONTHLY_COMMISSIONS: 'Comisioane Lunare',
   
   // Cheltuieli
-  EXPENSE_NAME: 'Cheltuiala',
+  EXPENSE_TYPE: 'Tip Cheltuiala',
+  EXPENSE_DESCRIPTION: 'Descriere',
   EXPENSE_PROJECT: 'Proiect',
   EXPENSE_CATEGORY: 'Categorie',
-  EXPENSE_DESCRIPTION: 'Descriere',
   EXPENSE_AMOUNT: 'Suma',
   EXPENSE_VAT_INCLUDED: 'TVA Inclus',
   EXPENSE_DATE: 'Data',
@@ -98,6 +98,12 @@ export const VAT_INCLUDED = {
 export const SOURCE = {
   AUTOMATIC: 'Automat',
   MANUAL: 'Manual'
+};
+
+// Expense type options
+export const EXPENSE_TYPES = {
+  COMMISSIONS: 'Comisioane',
+  OTHER: 'Altele'
 };
 
 // Setter/Caller commission percentage (5%)
