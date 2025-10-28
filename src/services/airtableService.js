@@ -308,11 +308,16 @@ export async function expenseExists(expenseId) {
 export async function createExpense(expenseData) {
   const expenseId = expenseData.fields?.[FIELDS.EXPENSE_ID];
   
-  logger.debug('Creating expense record', { expenseId });
+  logger.info('Creating expense record', { 
+    expenseId,
+    fullData: JSON.stringify(expenseData, null, 2)
+  });
   
   try {
     await retryWithBackoff(async () => {
+      logger.info('Attempting Airtable create', { expenseId });
       await base(TABLES.EXPENSES).create([expenseData]);
+      logger.info('Airtable create successful', { expenseId });
     });
     
     logger.info('Created expense record', { 
@@ -326,7 +331,11 @@ export async function createExpense(expenseData) {
   } catch (error) {
     logger.error('Failed to create expense', {
       error: error.message,
-      expenseId
+      errorString: error.toString(),
+      statusCode: error.statusCode,
+      stack: error.stack,
+      expenseId,
+      expenseData: JSON.stringify(expenseData, null, 2)
     });
     throw error;
   }
