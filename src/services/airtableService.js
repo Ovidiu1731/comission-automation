@@ -122,23 +122,27 @@ export async function getSalesByIds(saleIds) {
     return [];
   }
   
-  logger.debug('Fetching sales by IDs', { count: saleIds.length });
+  logger.info('getSalesByIds called', { count: saleIds.length, ids: saleIds.slice(0, 3) });
   
   try {
     const results = [];
     const idsToFetch = [...saleIds];
     
     // Fetch in batches (Airtable limits to ~100 IDs per request)
+    logger.info('Starting batch fetching', { totalIds: idsToFetch.length });
     while (idsToFetch.length > 0) {
       const batch = idsToFetch.splice(0, 100);
+      logger.info('Processing batch', { batchSize: batch.length, remaining: idsToFetch.length });
       
       await retryWithBackoff(async () => {
+        logger.info('About to call Airtable select');  
         await base(TABLES.SALES)
           .select({
             filterByFormula: `OR(${batch.map(id => `RECORD_ID() = "${id}"`).join(', ')})`,
             maxRecords: 100
           })
           .eachPage((records, fetchNextPage) => {
+            logger.info('eachPage callback called', { recordCount: records.length });
             records.forEach(record => {
               results.push({
                 id: record.id,
@@ -150,7 +154,9 @@ export async function getSalesByIds(saleIds) {
                 monthYear: record.get(FIELDS.SALE_MONTH)
               });
             });
+            logger.info('About to call fetchNextPage');
             fetchNextPage();
+            logger.info('fetchNextPage called');
           });
       });
     }

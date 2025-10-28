@@ -49,20 +49,35 @@ export async function processSalesRepCommissions() {
     let errors = 0;
     
     // Process each commission
-    for (const commission of commissions) {
+    logger.info(`Starting to process ${commissions.length} commissions one by one`);
+    for (let i = 0; i < commissions.length; i++) {
+      const commission = commissions[i];
       try {
+        logger.info(`[${i+1}/${commissions.length}] Processing commission`, {
+          commissionId: commission.id,
+          name: commission.name,
+          salesCount: commission.sales?.length || 0
+        });
         const result = await processSalesRepCommission(commission, month, year);
+        logger.info(`[${i+1}/${commissions.length}] Commission processed`, {
+          commissionId: commission.id,
+          created: result.created,
+          skipped: result.skipped
+        });
         created += result.created;
         skipped += result.skipped;
       } catch (error) {
-        logger.error('Failed to process Sales Rep commission', {
+        logger.error(`[${i+1}/${commissions.length}] Failed to process Sales Rep commission`, {
           commissionId: commission.id,
           representative: commission.name,
-          error: error.message
+          error: error.message,
+          stack: error.stack
         });
         errors++;
       }
     }
+    
+    logger.info('Finished processing all commissions');
     
     logger.info('Completed Sales Rep commission processing', {
       total: commissions.length,
@@ -115,7 +130,9 @@ async function processSalesRepCommission(commission, month, year) {
     return { created: 0, skipped: 1 };
   }
   
+  logger.info('About to fetch sales by IDs', { commissionId, saleIdsCount: saleIds.length });
   const sales = await getSalesByIds(saleIds);
+  logger.info('Fetched sales successfully', { commissionId, salesCount: sales.length });
   
   if (sales.length === 0) {
     logger.warn('Could not fetch sales for commission, skipping', {
