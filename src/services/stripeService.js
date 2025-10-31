@@ -30,6 +30,14 @@ import {
 import { logger } from '../utils/logger.js';
 
 /**
+ * Format number with thousand separators
+ * Example: 125184 -> "125,184"
+ */
+function formatNumberWithCommas(number) {
+  return Math.round(number).toLocaleString('en-US');
+}
+
+/**
  * Helper function to detect Stripe payments
  * Handles case-insensitive matching and diacritics
  */
@@ -267,8 +275,8 @@ async function createOrUpdateStripeExpense(group, month, year) {
   // Generate unique expense ID: stripe_{project}_{month}
   const expenseId = `stripe_${project}_${month}`.replace(/\s+/g, '_');
   
-  // Format total processed amount for description
-  const formattedTotalProcessed = Math.round(totalProcessed * 100) / 100;
+  // Format total processed amount for description with thousand separators
+  const formattedTotalProcessed = formatNumberWithCommas(totalProcessed);
   
   // Prepare expense data
   const expenseFields = {
@@ -315,7 +323,7 @@ async function createOrUpdateStripeExpense(group, month, year) {
         project,
         amount: roundedFee,
         paymentCount,
-        totalProcessed: formattedTotalProcessed
+        totalProcessed
       });
       
       await createExpense({
