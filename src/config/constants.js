@@ -87,6 +87,7 @@ export const EXPENSE_CATEGORIES = {
   TEAM_LEADER_CALLER: 'Team Leader Caller',
   STRIPE: 'Stripe',
   FACEBOOK_ADS: 'Reclame Facebook',
+  COPYWRITING: 'Copywriting',
   UNKNOWN: 'Unknown'
 };
 
@@ -159,6 +160,22 @@ export const FACEBOOK = {
   timeout: 30000, // 30 second timeout for API calls
   tokenExpiryWarningDays: 7, // Warn when token expires in less than 7 days
   expectedCurrency: 'RON'
+};
+
+// Copywriting commission configuration
+export const COPYWRITING = {
+  copywriter: {
+    name: 'Diana Nastase',
+    utmIdentifier: 'diananastase', // For matching (normalized)
+  },
+  category: 'Copywriting',
+  // Progressive tier structure (based on EUR thresholds)
+  tiers: [
+    { max: 10000, rate: 0.05 },     // 5% up to €10,000
+    { max: 25000, rate: 0.075 },    // 7.5% €10,001-€25,000
+    { max: Infinity, rate: 0.10 }   // 10% over €25,001
+  ],
+  eurRonRate: 5.0 // Approximate EUR/RON exchange rate (RON / EUR)
 };
 
 /**

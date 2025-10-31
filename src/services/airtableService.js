@@ -251,6 +251,55 @@ export async function getSalesByIds(saleIds) {
 }
 
 /**
+ * Get sales by Utm Campaign for copywriting commission processing
+ * Returns ALL sales for the given month (not filtered by Utm Campaign yet)
+ */
+export async function getSalesByUtmCampaign(monthYear) {
+  logger.info('Fetching sales for copywriting commissions', { monthYear });
+  
+  try {
+    const results = [];
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.SALES)
+        .select({
+          filterByFormula: `{${FIELDS.SALE_MONTH}} = "${monthYear}"`,
+          maxRecords: 10000
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            // Return all sales - filtering by Utm Campaign happens in the service
+            results.push({
+              id: record.id,
+              [FIELDS.PROJECT]: record.get(FIELDS.PROJECT),
+              [FIELDS.AMOUNT_WITHOUT_VAT]: record.get(FIELDS.AMOUNT_WITHOUT_VAT),
+              [FIELDS.TOTAL_AMOUNT]: record.get(FIELDS.TOTAL_AMOUNT),
+              [FIELDS.UTM_CAMPAIGN]: record.get(FIELDS.UTM_CAMPAIGN),
+              [FIELDS.CLIENT_NAME]: record.get(FIELDS.CLIENT_NAME),
+              [FIELDS.SALE_DATE]: record.get(FIELDS.SALE_DATE)
+            });
+          });
+          
+          fetchNextPage();
+        });
+    });
+    
+    logger.info('Fetched sales for copywriting processing', { 
+      count: results.length,
+      monthYear 
+    });
+    
+    return results;
+  } catch (error) {
+    logger.error('Failed to fetch sales for copywriting', {
+      error: error.message,
+      monthYear
+    });
+    throw error;
+  }
+}
+
+/**
  * Get sales for setter/caller commission processing
  */
 export async function getSetterCallerSales(monthYear) {

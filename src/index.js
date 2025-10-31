@@ -17,6 +17,7 @@ import { processSetterCallerCommissions } from './services/setterCallerService.j
 import { processTeamLeaderCommissions } from './services/teamLeaderService.js';
 import { processStripeFees } from './services/stripeService.js';
 import { processFacebookAds } from './services/facebookAdsService.js';
+import { processCopywritingCommissions } from './services/copywritingService.js';
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +69,12 @@ async function processCommissions() {
     
     logger.info('Facebook Ads processing completed', facebookAdsResults);
     
+    // Process Copywriting commissions
+    logger.info('Processing Copywriting commissions...');
+    const copywritingResults = await processCopywritingCommissions();
+    
+    logger.info('Copywriting processing completed', copywritingResults);
+    
     // Summary
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     
@@ -78,9 +85,11 @@ async function processCommissions() {
       teamLeader: teamLeaderResults,
       stripe: stripeResults,
       facebookAds: facebookAdsResults,
-      totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created + stripeResults.created + facebookAdsResults.created,
-      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped + stripeResults.skipped + facebookAdsResults.skipped,
-      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors + stripeResults.errors + facebookAdsResults.errors
+      copywriting: copywritingResults,
+      totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created + stripeResults.created + facebookAdsResults.created + copywritingResults.created,
+      totalExpensesUpdated: (salesRepResults.updated || 0) + (setterCallerResults.updated || 0) + (teamLeaderResults.updated || 0) + (stripeResults.updated || 0) + (facebookAdsResults.updated || 0) + (copywritingResults.updated || 0),
+      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped + stripeResults.skipped + facebookAdsResults.skipped + copywritingResults.skipped,
+      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors + stripeResults.errors + facebookAdsResults.errors + copywritingResults.errors
     });
     
     return {
@@ -89,7 +98,8 @@ async function processCommissions() {
       setterCaller: setterCallerResults,
       teamLeader: teamLeaderResults,
       stripe: stripeResults,
-      facebookAds: facebookAdsResults
+      facebookAds: facebookAdsResults,
+      copywriting: copywritingResults
     };
   } catch (error) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
