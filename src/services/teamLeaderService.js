@@ -130,15 +130,16 @@ export async function processTeamLeaderCommissions() {
           continue;
         }
         
-        // Calculate Team Leader commission
+        // Calculate Team Leader commission (includes refunds)
         const commission = sale.amountWithoutVat * teamLeaderConfig.commissionRate;
+        const isRefund = sale.amountWithoutVat < 0;
         
-        // Track for stats
+        // Track for stats (only count positive sales, not refunds)
         if (teamLeaderConfig.name === TEAM_LEADERS.SETTER.name) {
-          stats.setterSales++;
+          if (!isRefund) stats.setterSales++;
           stats.georgeCoapsiTotal += commission;
         } else {
-          stats.callerSales++;
+          if (!isRefund) stats.callerSales++;
           stats.alexandruPrisiceanuTotal += commission;
         }
         
@@ -158,7 +159,8 @@ export async function processTeamLeaderCommissions() {
         }
         
         teamLeaderCommissionsByProject[key].totalCommission += commission;
-        teamLeaderCommissionsByProject[key].salesCount++;
+        // Only count positive sales, not refunds
+        if (!isRefund) teamLeaderCommissionsByProject[key].salesCount++;
         teamLeaderCommissionsByProject[key].saleIds.push(sale.id);
         
         logger.debug('Calculated Team Leader commission', {
