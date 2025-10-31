@@ -20,7 +20,6 @@ import {
   VAT_INCLUDED,
   SOURCE,
   TEAM_LEADERS,
-  SETTER_CALLER_NAME_REGEX,
   getCurrentRomanianMonth,
   getCurrentYear,
   getCurrentMonthYearString
@@ -32,18 +31,27 @@ import {
 import { logger } from '../utils/logger.js';
 
 /**
- * Extract CamelCase name from Utm Campaign field
- * Handles various formats: "Name", "Name - Extra", "Name Extra"
+ * Extract name from Utm Campaign field
+ * Handles various formats: "Name", "Name - Extra", "Name Extra", "name" (lowercase)
+ * Returns the name for fuzzy matching - validation happens at lookup time
  */
 function extractNameFromUtmCampaign(utmCampaign) {
   if (!utmCampaign) return null;
   
+  // Convert to string and trim
+  const utmString = String(utmCampaign).trim();
+  
+  // Skip numeric codes (e.g., "260625")
+  if (/^\d+$/.test(utmString)) {
+    return null;
+  }
+  
   // Split by common delimiters and take the first part
-  const parts = utmCampaign.split(/[-–—\s]+/);
+  const parts = utmString.split(/[-–—\s]+/);
   const name = parts[0].trim();
   
-  // Validate CamelCase format (e.g., "ValentinDragomir")
-  if (SETTER_CALLER_NAME_REGEX.test(name)) {
+  // Return any non-empty alphabetic name (let fuzzy matching validate it)
+  if (name && /^[a-zA-Z]+$/.test(name)) {
     return name;
   }
   
