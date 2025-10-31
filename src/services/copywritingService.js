@@ -368,16 +368,14 @@ async function createOrUpdateCopywritingExpense(data, totalSalesValueRON, totalC
   // Generate unique expense ID
   const expenseId = `copywriting_DianaNastase_${project}_${month}`;
   
-  // Format amounts for description
-  const formattedProjectSalesValue = formatNumberWithCommas(projectSalesValue);
-  const formattedTotalSalesValue = formatNumberWithCommas(totalSalesValueRON);
+  // Format EUR amount for description
   const totalSalesEUR = (totalSalesValueRON / COPYWRITING.eurRonRate).toFixed(2);
   
   // Check if expense already exists
   const existingExpense = await getExpenseByExpenseId(expenseId);
   
   const expenseFields = {
-    [FIELDS.EXPENSE_DESCRIPTION]: `Comision copywriting - Diana Nastase (${salesCount} vanzari, ${formattedProjectSalesValue} RON vanzari din total ${formattedTotalSalesValue} RON / €${totalSalesEUR})`,
+    [FIELDS.EXPENSE_DESCRIPTION]: `Comision copywriting: Diana Nastase (€${totalSalesEUR})`,
     [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
     [FIELDS.EXPENSE_PROJECT]: project,
     [FIELDS.EXPENSE_CATEGORY]: COPYWRITING.category,
