@@ -14,6 +14,7 @@ import {
 } from './config/constants.js';
 import { processSalesRepCommissions } from './services/salesRepService.js';
 import { processSetterCallerCommissions } from './services/setterCallerService.js';
+import { processTeamLeaderCommissions } from './services/teamLeaderService.js';
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +48,12 @@ async function processCommissions() {
     
     logger.info('Setter/Caller processing completed', setterCallerResults);
     
+    // Process Team Leader commissions
+    logger.info('Processing Team Leader commissions...');
+    const teamLeaderResults = await processTeamLeaderCommissions();
+    
+    logger.info('Team Leader processing completed', teamLeaderResults);
+    
     // Summary
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     
@@ -54,15 +61,17 @@ async function processCommissions() {
       duration: `${duration}s`,
       salesRep: salesRepResults,
       setterCaller: setterCallerResults,
-      totalExpensesCreated: salesRepResults.created + setterCallerResults.created,
-      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped,
-      totalErrors: salesRepResults.errors + setterCallerResults.errors
+      teamLeader: teamLeaderResults,
+      totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created,
+      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped,
+      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors
     });
     
     return {
       success: true,
       salesRep: salesRepResults,
-      setterCaller: setterCallerResults
+      setterCaller: setterCallerResults,
+      teamLeader: teamLeaderResults
     };
   } catch (error) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -84,7 +93,7 @@ async function processCommissions() {
  * Initialize cron schedule
  */
 function initializeScheduler() {
-  // Daily at 7:40 PM Romania time - TESTING SETTER/CALLER DESCRIPTION FIX
+  // Daily at 7:40 PM Romania time - TESTING TEAM LEADER COMMISSION AUTOMATION
   // Romania timezone is UTC+2 (EET) or UTC+3 (EEST)
   const cronSchedule = process.env.CRON_SCHEDULE || '40 19 * * *'; // 7:40 PM Romania time
   

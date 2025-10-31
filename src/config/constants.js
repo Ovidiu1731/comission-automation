@@ -83,6 +83,8 @@ export const EXPENSE_CATEGORIES = {
   CALLER: 'Caller',
   SETTER: 'Setter',
   TEAM_LEADER: 'Team Leader',
+  TEAM_LEADER_SETTER: 'Team Leader Setter',
+  TEAM_LEADER_CALLER: 'Team Leader Caller',
   UNKNOWN: 'Unknown'
 };
 
@@ -109,6 +111,20 @@ export const EXPENSE_TYPES = {
 
 // Setter/Caller commission percentage (5%)
 export const SETTER_CALLER_COMMISSION_RATE = 0.05;
+
+// Team Leader configuration
+export const TEAM_LEADERS = {
+  SETTER: {
+    name: 'George Coapsi',
+    commissionRate: 0.05, // 5%
+    category: 'Team Leader' // Using existing category; user can manually change to 'Team Leader Setter' if option exists
+  },
+  CALLER: {
+    name: 'Alexandru Prisiceanu',
+    commissionRate: 0.02, // 2%
+    category: 'Team Leader' // Using existing category; user can manually change to 'Team Leader Caller' if option exists
+  }
+};
 
 /**
  * Get current Romanian month name
