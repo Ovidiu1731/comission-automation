@@ -293,7 +293,7 @@ async function createOrUpdateFacebookAdsExpense(group, month, year) {
     [FIELDS.EXPENSE_PROJECT]: project,
     [FIELDS.EXPENSE_CATEGORY]: FACEBOOK.category, // "Reclame Facebook"
     [FIELDS.EXPENSE_AMOUNT]: roundedSpend,
-    [FIELDS.EXPENSE_VAT_INCLUDED]: VAT_INCLUDED.YES, // Facebook ads include VAT
+    [FIELDS.EXPENSE_VAT_INCLUDED]: VAT_INCLUDED.NO, // Facebook ads - VAT not included
     [FIELDS.EXPENSE_MONTH]: month,
     [FIELDS.EXPENSE_YEAR]: year,
     [FIELDS.EXPENSE_SOURCE]: SOURCE.AUTOMATIC,
