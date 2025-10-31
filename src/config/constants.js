@@ -86,6 +86,7 @@ export const EXPENSE_CATEGORIES = {
   TEAM_LEADER_SETTER: 'Team Leader Setter',
   TEAM_LEADER_CALLER: 'Team Leader Caller',
   STRIPE: 'Stripe',
+  FACEBOOK_ADS: 'Reclame Facebook',
   UNKNOWN: 'Unknown'
 };
 
@@ -133,6 +134,31 @@ export const STRIPE = {
   feeRate: 0.02, // 2%
   paymentMethodIdentifier: 'link de plat', // For case-insensitive matching (handles both "plata" and "plată")
   category: 'Stripe'
+};
+
+// Project names for campaign mapping
+export const PROJECTS = [
+  'Arta Vizibilitatii',
+  'CODCOM',
+  'Andrei Bordeianu',
+  'Artok Academy'
+];
+
+// Facebook Ads configuration
+export const FACEBOOK = {
+  apiVersion: 'v21.0',
+  baseUrl: 'https://graph.facebook.com',
+  category: 'Reclame Facebook',
+  defaultProject: 'Cheltuială Comună', // For unmapped campaigns
+  projects: PROJECTS,
+  rateLimit: {
+    maxCalls: 200, // Per hour
+    retryDelay: 60000, // 60 seconds
+    maxRetries: 3
+  },
+  timeout: 30000, // 30 second timeout for API calls
+  tokenExpiryWarningDays: 7, // Warn when token expires in less than 7 days
+  expectedCurrency: 'RON'
 };
 
 /**

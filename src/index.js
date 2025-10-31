@@ -16,6 +16,7 @@ import { processSalesRepCommissions } from './services/salesRepService.js';
 import { processSetterCallerCommissions } from './services/setterCallerService.js';
 import { processTeamLeaderCommissions } from './services/teamLeaderService.js';
 import { processStripeFees } from './services/stripeService.js';
+import { processFacebookAds } from './services/facebookAdsService.js';
 
 // Load environment variables
 dotenv.config();
@@ -61,6 +62,12 @@ async function processCommissions() {
     
     logger.info('Stripe processing completed', stripeResults);
     
+    // Process Facebook Ads
+    logger.info('Processing Facebook Ads expenses...');
+    const facebookAdsResults = await processFacebookAds();
+    
+    logger.info('Facebook Ads processing completed', facebookAdsResults);
+    
     // Summary
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     
@@ -70,9 +77,10 @@ async function processCommissions() {
       setterCaller: setterCallerResults,
       teamLeader: teamLeaderResults,
       stripe: stripeResults,
-      totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created + stripeResults.created,
-      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped + stripeResults.skipped,
-      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors + stripeResults.errors
+      facebookAds: facebookAdsResults,
+      totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created + stripeResults.created + facebookAdsResults.created,
+      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped + stripeResults.skipped + facebookAdsResults.skipped,
+      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors + stripeResults.errors + facebookAdsResults.errors
     });
     
     return {
@@ -80,7 +88,8 @@ async function processCommissions() {
       salesRep: salesRepResults,
       setterCaller: setterCallerResults,
       teamLeader: teamLeaderResults,
-      stripe: stripeResults
+      stripe: stripeResults,
+      facebookAds: facebookAdsResults
     };
   } catch (error) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
