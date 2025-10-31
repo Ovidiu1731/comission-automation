@@ -39,23 +39,18 @@ function formatNumberWithCommas(number) {
 
 /**
  * Helper function to detect Stripe payments
- * Handles case-insensitive matching and diacritics
+ * Handles case-insensitive matching
  */
 function isStripePayment(paymentMethod) {
   if (!paymentMethod) return false;
   
-  // Normalize: remove diacritics, convert to lowercase, trim spaces
+  // Convert to lowercase and trim spaces
   const normalized = paymentMethod
     .toLowerCase()
-    .replace(/ă/g, 'a')
-    .replace(/â/g, 'a')
-    .replace(/î/g, 'i')
-    .replace(/ș/g, 's')
-    .replace(/ț/g, 't')
     .trim();
   
-  // Check if it contains "link de plat" (works for both "plata" and "plată")
-  return normalized.includes(STRIPE.paymentMethodIdentifier);
+  // Check if it contains "link" (any variation)
+  return normalized.includes('link');
 }
 
 /**

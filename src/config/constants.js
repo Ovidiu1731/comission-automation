@@ -132,7 +132,7 @@ export const TEAM_LEADERS = {
 // Stripe fee configuration
 export const STRIPE = {
   feeRate: 0.02, // 2%
-  paymentMethodIdentifier: 'link de plat', // For case-insensitive matching (handles both "plata" and "plată")
+  paymentMethodIdentifier: 'link', // For case-insensitive matching (any payment method containing "link")
   category: 'Stripe'
 };
 
