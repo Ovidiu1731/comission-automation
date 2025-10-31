@@ -110,9 +110,9 @@ export async function processTeamLeaderCommissions() {
       for (const sale of sales) {
         stats.processed++;
         
-        // Validate amount
-        if (!sale.amountWithoutVat || sale.amountWithoutVat <= 0) {
-          logger.debug('Skipping sale - invalid amount', {
+        // Validate amount exists (allow negative amounts for refunds)
+        if (sale.amountWithoutVat === null || sale.amountWithoutVat === undefined) {
+          logger.debug('Skipping sale - missing amount', {
             saleId: sale.id,
             amount: sale.amountWithoutVat
           });
