@@ -281,7 +281,7 @@ async function createOrUpdateStripeExpense(group, month, year) {
   // Prepare expense data
   const expenseFields = {
     [FIELDS.EXPENSE_DESCRIPTION]: `Comision procesare plati Stripe - ${project} (${paymentCount} tranzactii, ${formattedTotalProcessed} RON procesate)`,
-    [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
+    [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.BANKING_FEES,
     [FIELDS.EXPENSE_PROJECT]: project,
     [FIELDS.EXPENSE_CATEGORY]: STRIPE.category,
     [FIELDS.EXPENSE_AMOUNT]: roundedFee,

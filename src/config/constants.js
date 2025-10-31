@@ -107,6 +107,7 @@ export const SOURCE = {
 // Expense type options
 export const EXPENSE_TYPES = {
   COMMISSIONS: 'Comisioane',
+  BANKING_FEES: 'Taxe și comisioane bancare',
   OTHER: 'Altele'
 };
 
