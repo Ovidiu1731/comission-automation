@@ -288,7 +288,7 @@ async function createOrUpdateFacebookAdsExpense(group, month, year) {
   
   // Prepare expense data
   const expenseFields = {
-    [FIELDS.EXPENSE_DESCRIPTION]: `Cheltuieli publicitate Facebook Ads - ${project} (${campaignCount} campanii, ${formattedSpend} RON)`,
+    [FIELDS.EXPENSE_DESCRIPTION]: `Facebook Ads - ${project} (${campaignCount} campanii, ${formattedSpend} RON)`,
     [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.OTHER, // "Altele" - can be customized
     [FIELDS.EXPENSE_PROJECT]: project,
     [FIELDS.EXPENSE_CATEGORY]: FACEBOOK.category, // "Reclame Facebook"
