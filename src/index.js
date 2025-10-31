@@ -15,6 +15,7 @@ import {
 import { processSalesRepCommissions } from './services/salesRepService.js';
 import { processSetterCallerCommissions } from './services/setterCallerService.js';
 import { processTeamLeaderCommissions } from './services/teamLeaderService.js';
+import { processStripeFees } from './services/stripeService.js';
 
 // Load environment variables
 dotenv.config();
@@ -54,6 +55,12 @@ async function processCommissions() {
     
     logger.info('Team Leader processing completed', teamLeaderResults);
     
+    // Process Stripe fees
+    logger.info('Processing Stripe fees...');
+    const stripeResults = await processStripeFees();
+    
+    logger.info('Stripe processing completed', stripeResults);
+    
     // Summary
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     
@@ -62,16 +69,18 @@ async function processCommissions() {
       salesRep: salesRepResults,
       setterCaller: setterCallerResults,
       teamLeader: teamLeaderResults,
-      totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created,
-      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped,
-      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors
+      stripe: stripeResults,
+      totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created + stripeResults.created,
+      totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped + stripeResults.skipped,
+      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors + stripeResults.errors
     });
     
     return {
       success: true,
       salesRep: salesRepResults,
       setterCaller: setterCallerResults,
-      teamLeader: teamLeaderResults
+      teamLeader: teamLeaderResults,
+      stripe: stripeResults
     };
   } catch (error) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);

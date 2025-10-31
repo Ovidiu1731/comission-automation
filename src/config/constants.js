@@ -85,6 +85,7 @@ export const EXPENSE_CATEGORIES = {
   TEAM_LEADER: 'Team Leader',
   TEAM_LEADER_SETTER: 'Team Leader Setter',
   TEAM_LEADER_CALLER: 'Team Leader Caller',
+  STRIPE: 'Stripe',
   UNKNOWN: 'Unknown'
 };
 
@@ -124,6 +125,13 @@ export const TEAM_LEADERS = {
     commissionRate: 0.02, // 2%
     category: 'Team Leader' // Using existing category; user can manually change to 'Team Leader Caller' if option exists
   }
+};
+
+// Stripe fee configuration
+export const STRIPE = {
+  feeRate: 0.02, // 2%
+  paymentMethodIdentifier: 'link de plat', // For case-insensitive matching (handles both "plata" and "plată")
+  category: 'Stripe'
 };
 
 /**
