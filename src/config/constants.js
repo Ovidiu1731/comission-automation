@@ -23,7 +23,8 @@ export const TABLES = {
   MONTHLY_COMMISSIONS: 'Comisioane Lunare',
   SALES: 'Vânzări',
   REPRESENTATIVES: 'Reprezentanți',
-  EXPENSES: 'Cheltuieli'
+  EXPENSES: 'Cheltuieli',
+  PNL: 'P&L\'s'
 };
 
 // Field names mapping
@@ -74,7 +75,18 @@ export const FIELDS = {
   EXPENSE_SOURCE: 'Sursa',
   EXPENSE_ID: 'ID',
   EXPENSE_LAST_UPDATE: 'Ultima Actualizare',
-  EXPENSE_ASSOCIATED_SALES: 'Vanzari Asociate'
+  EXPENSE_ASSOCIATED_SALES: 'Vanzari Asociate',
+  
+  // P&L's
+  PNL_DENUMIRE: 'Denumire',
+  PNL_DESCRIERE: 'Descriere',
+  PNL_PROJECT: 'Proiect',
+  PNL_MONTH: 'Luna',
+  PNL_YEAR: 'An',
+  PNL_CATEGORY: 'Categorie',
+  PNL_INCASARI: 'Incasari',
+  PNL_CHELTUIELI: 'Cheltuieli',
+  PNL_SOURCE: 'Sursa'
 };
 
 // Category options for expenses (must match Airtable "Categorie" field options)
@@ -104,6 +116,17 @@ export const VAT_INCLUDED = {
 export const SOURCE = {
   AUTOMATIC: 'Automat',
   MANUAL: 'Manual'
+};
+
+// P&L Categories (must match Airtable "Categorie" field options in P&L's table)
+export const PNL_CATEGORIES = {
+  INCASARI: 'Incasari',
+  MARKETING: 'Marketing',
+  REPREZENTANTI: 'Reprezentanti',
+  CALLERI: 'Calleri',
+  SETTERI: 'Setteri',
+  TEAM_LEADERS: 'TeamLeaders',
+  TAXE_IMPOZITE: 'Taxe & Impozite'
 };
 
 // Expense type options

@@ -18,6 +18,7 @@ import { processTeamLeaderCommissions } from './services/teamLeaderService.js';
 import { processStripeFees } from './services/stripeService.js';
 import { processFacebookAds } from './services/facebookAdsService.js';
 import { processCopywritingCommissions } from './services/copywritingService.js';
+import { processPNL } from './services/pnlService.js';
 
 // Load environment variables
 dotenv.config();
@@ -75,6 +76,12 @@ async function processCommissions() {
     
     logger.info('Copywriting processing completed', copywritingResults);
     
+    // Process P&L records
+    logger.info('Processing P&L records...');
+    const pnlResults = await processPNL();
+    
+    logger.info('P&L processing completed', pnlResults);
+    
     // Summary
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     
@@ -86,10 +93,13 @@ async function processCommissions() {
       stripe: stripeResults,
       facebookAds: facebookAdsResults,
       copywriting: copywritingResults,
+      pnl: pnlResults,
       totalExpensesCreated: salesRepResults.created + setterCallerResults.created + teamLeaderResults.created + stripeResults.created + facebookAdsResults.created + copywritingResults.created,
       totalExpensesUpdated: (salesRepResults.updated || 0) + (setterCallerResults.updated || 0) + (teamLeaderResults.updated || 0) + (stripeResults.updated || 0) + (facebookAdsResults.updated || 0) + (copywritingResults.updated || 0),
       totalExpensesSkipped: salesRepResults.skipped + setterCallerResults.skipped + teamLeaderResults.skipped + stripeResults.skipped + facebookAdsResults.skipped + copywritingResults.skipped,
-      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors + stripeResults.errors + facebookAdsResults.errors + copywritingResults.errors
+      totalErrors: salesRepResults.errors + setterCallerResults.errors + teamLeaderResults.errors + stripeResults.errors + facebookAdsResults.errors + copywritingResults.errors,
+      totalPNLCreated: pnlResults.created,
+      totalPNLUpdated: pnlResults.updated
     });
     
     return {
@@ -99,7 +109,8 @@ async function processCommissions() {
       teamLeader: teamLeaderResults,
       stripe: stripeResults,
       facebookAds: facebookAdsResults,
-      copywriting: copywritingResults
+      copywriting: copywritingResults,
+      pnl: pnlResults
     };
   } catch (error) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);

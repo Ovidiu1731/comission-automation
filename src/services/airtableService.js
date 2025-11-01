@@ -30,7 +30,7 @@ async function waitForRateLimit() {
 /**
  * Retry with exponential backoff
  */
-async function retryWithBackoff(fn, maxAttempts = 3) {
+export async function retryWithBackoff(fn, maxAttempts = 3) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await waitForRateLimit();
