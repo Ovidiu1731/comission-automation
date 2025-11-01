@@ -37,6 +37,7 @@ export const FIELDS = {
   ROLE: 'Rol',
   TOTAL_MONTHLY_SALES: 'Total Vânzări Lunare',
   SETTER_CALLER_SUM: 'Suma Comision Setter/Caller',
+  TEAM_LEADER_COMMISSION: 'Comision Team Leader',
   
   // Vânzări
   CLIENT_NAME: 'Nume client',

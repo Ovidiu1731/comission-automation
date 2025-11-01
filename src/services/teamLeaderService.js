@@ -302,12 +302,14 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
         recordId: existingCommission.id,
         teamLeaderName,
         oldSalesCount: existingCommission.sales?.length || 0,
-        newSalesCount: saleIds.length
+        newSalesCount: saleIds.length,
+        totalCommission: summary.totalCommission.toFixed(2)
       });
       
       await updateMonthlyCommission(existingCommission.id, {
         fields: {
-          [FIELDS.SALES]: saleIds
+          [FIELDS.SALES]: saleIds,
+          [FIELDS.TEAM_LEADER_COMMISSION]: summary.totalCommission
         }
       });
       
@@ -315,28 +317,32 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
         recordId: existingCommission.id,
         teamLeaderName,
         month,
-        salesCount: saleIds.length
+        salesCount: saleIds.length,
+        totalCommission: summary.totalCommission.toFixed(2)
       });
     } else {
       // Create new record
       logger.info('Creating new monthly commission record for team leader', {
         teamLeaderName,
         month,
-        salesCount: saleIds.length
+        salesCount: saleIds.length,
+        totalCommission: summary.totalCommission.toFixed(2)
       });
       
       await createMonthlyCommission({
         fields: {
           [FIELDS.REPRESENTATIVE]: [representative.id],
           [FIELDS.MONTH]: month,
-          [FIELDS.SALES]: saleIds
+          [FIELDS.SALES]: saleIds,
+          [FIELDS.TEAM_LEADER_COMMISSION]: summary.totalCommission
         }
       });
       
       logger.info('✅ Created monthly commission record for team leader', {
         teamLeaderName,
         month,
-        salesCount: saleIds.length
+        salesCount: saleIds.length,
+        totalCommission: summary.totalCommission.toFixed(2)
       });
     }
   } catch (error) {
