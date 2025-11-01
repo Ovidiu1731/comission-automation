@@ -227,7 +227,6 @@ async function processSetterCallerCommission(commission, month, year) {
       [FIELDS.EXPENSE_CATEGORY]: category,
       [FIELDS.EXPENSE_AMOUNT]: roundedCommission,
       [FIELDS.EXPENSE_VAT_INCLUDED]: VAT_INCLUDED.NO,
-      [FIELDS.EXPENSE_DATE]: new Date().toISOString().split('T')[0],
       [FIELDS.EXPENSE_MONTH]: month,
       [FIELDS.EXPENSE_YEAR]: year,
       [FIELDS.EXPENSE_SOURCE]: SOURCE.AUTOMATIC,

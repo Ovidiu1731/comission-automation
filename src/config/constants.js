@@ -68,7 +68,6 @@ export const FIELDS = {
   EXPENSE_CATEGORY: 'Categorie',
   EXPENSE_AMOUNT: 'Suma',
   EXPENSE_VAT_INCLUDED: 'TVA Inclus',
-  EXPENSE_DATE: 'Data',
   EXPENSE_MONTH: 'Luna',
   EXPENSE_YEAR: 'An',
   EXPENSE_SOURCE: 'Sursa',
