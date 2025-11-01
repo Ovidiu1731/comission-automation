@@ -13,7 +13,11 @@ import {
   getSalesByIds,
   getExpenseByExpenseId,
   createExpense,
-  updateExpense
+  updateExpense,
+  getRepresentativeByExactName,
+  getMonthlyCommissionByRepAndMonth,
+  createMonthlyCommission,
+  updateMonthlyCommission
 } from './airtableService.js';
 import {
   FIELDS,
@@ -186,6 +190,47 @@ export async function processTeamLeaderCommissions() {
     const grouped = Object.values(teamLeaderCommissionsByProject);
     logger.info(`Grouped into ${grouped.length} Team Leader + Project combinations`);
     
+    // Group by team leader (aggregate all projects for monthly commission record)
+    const teamLeaderSummary = {};
+    
+    for (const group of grouped) {
+      const { teamLeaderName } = group;
+      
+      if (!teamLeaderSummary[teamLeaderName]) {
+        teamLeaderSummary[teamLeaderName] = {
+          teamLeaderName,
+          totalCommission: 0,
+          salesCount: 0,
+          saleIds: new Set()
+        };
+      }
+      
+      teamLeaderSummary[teamLeaderName].totalCommission += group.totalCommission;
+      teamLeaderSummary[teamLeaderName].salesCount += group.salesCount;
+      group.saleIds.forEach(id => teamLeaderSummary[teamLeaderName].saleIds.add(id));
+    }
+    
+    // Create/update monthly commission records for each team leader
+    logger.info('Creating/updating monthly commission records for team leaders');
+    
+    for (const [teamLeaderName, summary] of Object.entries(teamLeaderSummary)) {
+      try {
+        await createOrUpdateTeamLeaderMonthlyCommission(
+          teamLeaderName,
+          summary,
+          month,
+          year
+        );
+      } catch (error) {
+        logger.error('Failed to create/update team leader monthly commission', {
+          teamLeaderName,
+          error: error.message,
+          stack: error.stack
+        });
+        stats.errors++;
+      }
+    }
+    
     // Create/update expense records
     for (const group of grouped) {
       try {
@@ -209,6 +254,94 @@ export async function processTeamLeaderCommissions() {
     return stats;
   } catch (error) {
     logger.error('Team Leader commission processing failed', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create or update Team Leader monthly commission record in "Comisioane Lunare" table
+ */
+async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary, month, year) {
+  logger.info('Creating/updating monthly commission for team leader', {
+    teamLeaderName,
+    totalCommission: summary.totalCommission.toFixed(2),
+    salesCount: summary.salesCount
+  });
+  
+  try {
+    // Get representative record for this team leader
+    const representative = await getRepresentativeByExactName(teamLeaderName);
+    
+    if (!representative) {
+      logger.warn('Team leader not found in Representatives table, skipping monthly commission record', {
+        teamLeaderName
+      });
+      return null;
+    }
+    
+    logger.info('Found team leader representative', {
+      name: representative.name,
+      id: representative.id,
+      role: representative.role
+    });
+    
+    // Check if monthly commission record already exists
+    const existingCommission = await getMonthlyCommissionByRepAndMonth(
+      representative.id,
+      month
+    );
+    
+    const saleIds = Array.from(summary.saleIds);
+    
+    if (existingCommission) {
+      // Update existing record
+      logger.info('Updating existing monthly commission record for team leader', {
+        recordId: existingCommission.id,
+        teamLeaderName,
+        oldSalesCount: existingCommission.sales?.length || 0,
+        newSalesCount: saleIds.length
+      });
+      
+      await updateMonthlyCommission(existingCommission.id, {
+        fields: {
+          [FIELDS.SALES]: saleIds
+        }
+      });
+      
+      logger.info('✅ Updated monthly commission record for team leader', {
+        recordId: existingCommission.id,
+        teamLeaderName,
+        month,
+        salesCount: saleIds.length
+      });
+    } else {
+      // Create new record
+      logger.info('Creating new monthly commission record for team leader', {
+        teamLeaderName,
+        month,
+        salesCount: saleIds.length
+      });
+      
+      await createMonthlyCommission({
+        fields: {
+          [FIELDS.REPRESENTATIVE]: [representative.id],
+          [FIELDS.MONTH]: month,
+          [FIELDS.SALES]: saleIds
+        }
+      });
+      
+      logger.info('✅ Created monthly commission record for team leader', {
+        teamLeaderName,
+        month,
+        salesCount: saleIds.length
+      });
+    }
+  } catch (error) {
+    logger.error('Failed to create/update team leader monthly commission', {
+      teamLeaderName,
       error: error.message,
       stack: error.stack
     });

@@ -8,7 +8,11 @@ import {
   getSalesByUtmCampaign,
   getExpenseByExpenseId,
   createExpense,
-  updateExpense
+  updateExpense,
+  getRepresentativeByExactName,
+  getMonthlyCommissionByRepAndMonth,
+  createMonthlyCommission,
+  updateMonthlyCommission
 } from './airtableService.js';
 import {
   FIELDS,
@@ -293,6 +297,31 @@ export async function processCopywritingCommissions() {
     const projectCount = Object.keys(commissionsByProject).length;
     logger.info(`Grouped into ${projectCount} projects`, { projectCount });
     
+    // Create/update monthly commission record for copywriter
+    logger.info('Creating/updating monthly commission record for copywriter');
+    
+    try {
+      // Collect all sale IDs across all projects
+      const allSaleIds = validSales.map(sale => sale.id);
+      
+      await createOrUpdateCopywriterMonthlyCommission(
+        COPYWRITING.copywriter.name,
+        {
+          totalCommission: totalCommissionRON,
+          salesCount: validSales.length,
+          saleIds: allSaleIds
+        },
+        month,
+        year
+      );
+    } catch (error) {
+      logger.error('Failed to create/update copywriter monthly commission', {
+        copywriterName: COPYWRITING.copywriter.name,
+        error: error.message,
+        stack: error.stack
+      });
+    }
+    
     // Create or update expenses
     let created = 0;
     let updated = 0;
@@ -352,6 +381,94 @@ export async function processCopywritingCommissions() {
     
   } catch (error) {
     logger.error('Failed to process copywriting commissions', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Create or update Copywriter monthly commission record in "Comisioane Lunare" table
+ */
+async function createOrUpdateCopywriterMonthlyCommission(copywriterName, summary, month, year) {
+  logger.info('Creating/updating monthly commission for copywriter', {
+    copywriterName,
+    totalCommission: summary.totalCommission.toFixed(2),
+    salesCount: summary.salesCount
+  });
+  
+  try {
+    // Get representative record for this copywriter
+    const representative = await getRepresentativeByExactName(copywriterName);
+    
+    if (!representative) {
+      logger.warn('Copywriter not found in Representatives table, skipping monthly commission record', {
+        copywriterName
+      });
+      return null;
+    }
+    
+    logger.info('Found copywriter representative', {
+      name: representative.name,
+      id: representative.id,
+      role: representative.role
+    });
+    
+    // Check if monthly commission record already exists
+    const existingCommission = await getMonthlyCommissionByRepAndMonth(
+      representative.id,
+      month
+    );
+    
+    const saleIds = summary.saleIds;
+    
+    if (existingCommission) {
+      // Update existing record
+      logger.info('Updating existing monthly commission record for copywriter', {
+        recordId: existingCommission.id,
+        copywriterName,
+        oldSalesCount: existingCommission.sales?.length || 0,
+        newSalesCount: saleIds.length
+      });
+      
+      await updateMonthlyCommission(existingCommission.id, {
+        fields: {
+          [FIELDS.SALES]: saleIds
+        }
+      });
+      
+      logger.info('✅ Updated monthly commission record for copywriter', {
+        recordId: existingCommission.id,
+        copywriterName,
+        month,
+        salesCount: saleIds.length
+      });
+    } else {
+      // Create new record
+      logger.info('Creating new monthly commission record for copywriter', {
+        copywriterName,
+        month,
+        salesCount: saleIds.length
+      });
+      
+      await createMonthlyCommission({
+        fields: {
+          [FIELDS.REPRESENTATIVE]: [representative.id],
+          [FIELDS.MONTH]: month,
+          [FIELDS.SALES]: saleIds
+        }
+      });
+      
+      logger.info('✅ Created monthly commission record for copywriter', {
+        copywriterName,
+        month,
+        salesCount: saleIds.length
+      });
+    }
+  } catch (error) {
+    logger.error('Failed to create/update copywriter monthly commission', {
+      copywriterName,
       error: error.message,
       stack: error.stack
     });

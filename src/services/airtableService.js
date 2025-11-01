@@ -829,3 +829,174 @@ export async function createExpensesBatch(expenseRecords) {
   }
 }
 
+/**
+ * Get representative by name
+ * @param {string} name - Representative name
+ * @returns {Object|null} Representative record or null
+ */
+export async function getRepresentativeByExactName(name) {
+  logger.debug('Fetching representative by exact name', { name });
+  
+  try {
+    const results = [];
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.REPRESENTATIVES)
+        .select({
+          filterByFormula: `{${FIELDS.REP_NAME}} = "${name}"`,
+          maxRecords: 1
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            results.push({
+              id: record.id,
+              name: record.get(FIELDS.REP_NAME),
+              email: record.get(FIELDS.REP_EMAIL),
+              cif: record.get(FIELDS.REP_CIF),
+              role: record.get(FIELDS.REP_ROLE)
+            });
+          });
+          fetchNextPage();
+        });
+    });
+    
+    return results.length > 0 ? results[0] : null;
+  } catch (error) {
+    logger.error('Failed to fetch representative by exact name', {
+      name,
+      error: error.message
+    });
+    return null;
+  }
+}
+
+/**
+ * Get monthly commission record by representative and month
+ * @param {string} representativeId - The representative's record ID
+ * @param {string} month - Month name (e.g., "Octombrie")
+ * @returns {Object|null} Monthly commission record or null
+ */
+export async function getMonthlyCommissionByRepAndMonth(representativeId, month) {
+  logger.debug('Fetching monthly commission by rep and month', { representativeId, month });
+  
+  try {
+    const results = [];
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.MONTHLY_COMMISSIONS)
+        .select({
+          filterByFormula: `AND(
+            FIND("${representativeId}", ARRAYJOIN({${FIELDS.REPRESENTATIVE}})) > 0,
+            {${FIELDS.MONTH}} = "${month}"
+          )`,
+          maxRecords: 1
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            results.push({
+              id: record.id,
+              name: record.get(FIELDS.NAME),
+              representative: record.get(FIELDS.REPRESENTATIVE),
+              month: record.get(FIELDS.MONTH),
+              sales: record.get(FIELDS.SALES) || [],
+              finalCommission: record.get(FIELDS.FINAL_COMMISSION),
+              role: record.get(FIELDS.ROLE)
+            });
+          });
+          fetchNextPage();
+        });
+    });
+    
+    return results.length > 0 ? results[0] : null;
+  } catch (error) {
+    logger.error('Failed to fetch monthly commission by rep and month', {
+      representativeId,
+      month,
+      error: error.message
+    });
+    return null;
+  }
+}
+
+/**
+ * Create monthly commission record in "Comisioane Lunare" table
+ * @param {Object} commissionData - Commission data with fields
+ * @returns {Object|null} Created record or null
+ */
+export async function createMonthlyCommission(commissionData) {
+  const repName = commissionData.fields?.[FIELDS.REPRESENTATIVE]?.[0] || 'Unknown';
+  const month = commissionData.fields?.[FIELDS.MONTH];
+  
+  logger.info('Creating monthly commission record', { 
+    representative: repName,
+    month,
+    salesCount: commissionData.fields?.[FIELDS.SALES]?.length || 0
+  });
+  
+  try {
+    let createdRecord = null;
+    
+    await retryWithBackoff(async () => {
+      const records = await base(TABLES.MONTHLY_COMMISSIONS).create([commissionData]);
+      createdRecord = records[0];
+    });
+    
+    logger.info('Created monthly commission record', { 
+      recordId: createdRecord?.id,
+      representative: repName,
+      month
+    });
+    
+    return createdRecord ? {
+      id: createdRecord.id,
+      name: createdRecord.get(FIELDS.NAME),
+      representative: createdRecord.get(FIELDS.REPRESENTATIVE),
+      month: createdRecord.get(FIELDS.MONTH),
+      sales: createdRecord.get(FIELDS.SALES) || []
+    } : null;
+  } catch (error) {
+    logger.error('Failed to create monthly commission record', {
+      representative: repName,
+      month,
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Update monthly commission record in "Comisioane Lunare" table
+ * @param {string} recordId - Airtable record ID
+ * @param {Object} updateData - Update data with fields
+ * @returns {boolean} Success status
+ */
+export async function updateMonthlyCommission(recordId, updateData) {
+  logger.info('Updating monthly commission record', { 
+    recordId,
+    updateFields: Object.keys(updateData.fields || {})
+  });
+  
+  try {
+    await retryWithBackoff(async () => {
+      await base(TABLES.MONTHLY_COMMISSIONS).update([{
+        id: recordId,
+        fields: updateData.fields
+      }]);
+    });
+    
+    logger.info('Updated monthly commission record', { 
+      recordId
+    });
+    
+    return true;
+  } catch (error) {
+    logger.error('Failed to update monthly commission record', {
+      recordId,
+      error: error.message,
+      updateData: JSON.stringify(updateData, null, 2)
+    });
+    throw error;
+  }
+}
+
