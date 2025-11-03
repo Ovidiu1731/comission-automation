@@ -405,23 +405,13 @@ async function createOrUpdatePNLRecord(
     // Check if record exists - now search by cheltuiala name too since multiple records per category
     const existingRecord = await getPNLRecord(project, month, year, category, cheltuialaName);
     
-    // Format suma as text with "RON" prefix or "%" suffix
-    let sumaFormatted;
-    if (cheltuialaName === PNL_SUMMARY_RECORDS.MARJA_PROFIT) {
-      // For margin, format as percentage
-      sumaFormatted = `${suma.toFixed(2)}%`;
-    } else {
-      // For all amounts, format with RON prefix
-      sumaFormatted = `RON ${suma.toFixed(2)}`;
-    }
-    
     const recordData = {
       [FIELDS.PNL_CHELTUIALA]: cheltuialaName,
       [FIELDS.PNL_PROJECT]: project,
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
       [FIELDS.PNL_CATEGORY]: category,
-      [FIELDS.PNL_SUMA]: sumaFormatted, // Now formatted as text
+      [FIELDS.PNL_SUMA]: suma, // Currency field - no formatting
       [FIELDS.PNL_SOURCE]: SOURCE.AUTOMATIC,
       [FIELDS.PNL_DESCRIERE]: description
     };
