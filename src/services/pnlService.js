@@ -234,8 +234,6 @@ function mapExpenseCategoryToPNL(expenseCategory) {
  * Create or update P&L records for a project
  */
 async function createOrUpdatePNLRecords(project, month, year, revenue, salesCount, expenses, stats) {
-  const denumire = `${project} - ${month} ${year}`;
-  
   logger.info('Creating/updating P&L records', {
     project,
     month,
@@ -245,9 +243,10 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
   });
   
   // 1. Create/Update Revenue (Incasari) record
+  // Denumire = category name (e.g., "Incasari")
   try {
     await createOrUpdatePNLRecord(
-      denumire,
+      PNL_CATEGORIES.INCASARI, // Denumire is the category name
       project,
       month,
       year,
@@ -292,12 +291,12 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
       }
       
       await createOrUpdatePNLRecord(
-        denumire,
+        pnlCategory, // Denumire is the category name (e.g., "Marketing", "Reprezentanti")
         project,
         month,
         year,
         pnlCategory,
-        revenue,
+        0, // No revenue for expense rows
         expenseAmount,
         description,
         stats
