@@ -205,10 +205,8 @@ export const COPYWRITING = {
  * @returns {string} Current month name (e.g., "Octombrie")
  */
 export function getCurrentRomanianMonth() {
-  // TEMPORARY: Force October for testing
-  return 'Octombrie';
-  // const now = new Date();
-  // return ROMANIAN_MONTHS[now.getMonth()];
+  const now = new Date();
+  return ROMANIAN_MONTHS[now.getMonth()];
 }
 
 /**
@@ -216,8 +214,7 @@ export function getCurrentRomanianMonth() {
  * @returns {number} Current year (e.g., 2025)
  */
 export function getCurrentYear() {
-  return 2025;
-  // return new Date().getFullYear();
+  return new Date().getFullYear();
 }
 
 /**
