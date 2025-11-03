@@ -41,7 +41,8 @@ export async function processPNL() {
     const expensesByProject = await getExpensesByProject(month, year);
     
     logger.info('Fetched expenses data', {
-      projectCount: Object.keys(expensesByProject).length
+      projectCount: Object.keys(expensesByProject).length,
+      totalExpenses: Object.values(expensesByProject).reduce((sum, items) => sum + items.length, 0)
     });
     
     // Step 3: Get all projects that have either sales or expenses
@@ -57,12 +58,12 @@ export async function processPNL() {
       try {
         const revenue = salesByProject[project]?.total || 0;
         const salesCount = salesByProject[project]?.count || 0;
-        const expenses = expensesByProject[project] || {};
+        const expenses = expensesByProject[project] || []; // Now an array
         
         logger.info(`Processing P&L for project: ${project}`, {
           revenue,
           salesCount,
-          expenseCategories: Object.keys(expenses).length
+          expenseCount: expenses.length
         });
         
         // Create/update P&L records for this project
@@ -136,10 +137,10 @@ async function getSalesByProject(month, year) {
 }
 
 /**
- * Get all expenses grouped by project and category for a given month
+ * Get all individual expenses for a given month (not aggregated)
  */
 async function getExpensesByProject(month, year) {
-  logger.debug('Fetching expenses by project', { month, year });
+  logger.debug('Fetching individual expenses by project', { month, year });
   
   const expensesByProject = {};
   
@@ -164,29 +165,23 @@ async function getExpensesByProject(month, year) {
             const project = record.get(FIELDS.EXPENSE_PROJECT);
             const category = record.get(FIELDS.EXPENSE_CATEGORY);
             const amount = record.get(FIELDS.EXPENSE_AMOUNT) || 0;
+            const description = record.get(FIELDS.EXPENSE_DESCRIPTION) || '';
             
             if (project && category) {
               if (!expensesByProject[project]) {
-                expensesByProject[project] = {};
+                expensesByProject[project] = [];
               }
               
               // Map expense categories to P&L categories
               const pnlCategory = mapExpenseCategoryToPNL(category);
               
               if (pnlCategory) {
-                if (!expensesByProject[project][pnlCategory]) {
-                  expensesByProject[project][pnlCategory] = {
-                    total: 0,
-                    count: 0,
-                    items: []
-                  };
-                }
-                expensesByProject[project][pnlCategory].total += amount;
-                expensesByProject[project][pnlCategory].count++;
-                expensesByProject[project][pnlCategory].items.push({
-                  category,
+                // Store each expense as individual item
+                expensesByProject[project].push({
+                  category: pnlCategory,
+                  expenseCategory: category,
                   amount,
-                  description: record.get(FIELDS.EXPENSE_DESCRIPTION)
+                  description
                 });
               }
             }
@@ -232,6 +227,7 @@ function mapExpenseCategoryToPNL(expenseCategory) {
 
 /**
  * Create or update P&L records for a project
+ * Creates individual records for each expense item
  */
 async function createOrUpdatePNLRecords(project, month, year, revenue, salesCount, expenses, stats) {
   logger.info('Creating/updating P&L records', {
@@ -239,15 +235,15 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
     month,
     year,
     revenue,
-    salesCount
+    salesCount,
+    expenseCount: expenses?.length || 0
   });
   
   // 1. Create/Update Revenue (Incasari) record
-  // Denumire = category name (e.g., "Incasari")
   // Revenue is stored as NEGATIVE expense so P&L formula shows it as positive
   try {
     await createOrUpdatePNLRecord(
-      PNL_CATEGORIES.INCASARI, // Denumire is the category name
+      PNL_CATEGORIES.INCASARI, // Cheltuiala name
       project,
       month,
       year,
@@ -264,49 +260,51 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
     stats.errors++;
   }
   
-  // 2. Create/Update expense records for each P&L category
-  const pnlCategories = [
-    PNL_CATEGORIES.MARKETING,
-    PNL_CATEGORIES.REPREZENTANTI,
-    PNL_CATEGORIES.CALLERI,
-    PNL_CATEGORIES.SETTERI,
-    PNL_CATEGORIES.TAXE_IMPOZITE
-  ];
-  
-  for (const pnlCategory of pnlCategories) {
-    try {
-      const expenseData = expenses[pnlCategory];
-      const expenseAmount = expenseData?.total || 0;
-      const expenseCount = expenseData?.count || 0;
-      
-      // Build description from expense items
-      let description = '';
-      if (expenseData && expenseData.items.length > 0) {
-        const itemDescriptions = expenseData.items.map(item => 
-          `${item.category} (${item.amount.toFixed(2)} RON)`
+  // 2. Create individual P&L record for EACH expense
+  if (expenses && expenses.length > 0) {
+    for (const expense of expenses) {
+      try {
+        // Extract name from description (e.g., "Comision Mario Cazacu" -> "Mario Cazacu")
+        let cheltuialaName = expense.description;
+        
+        // For commission expenses, clean up the description
+        if (expense.description.includes('Comision')) {
+          cheltuialaName = expense.description.replace(/^Comision\s+/, '');
+        }
+        
+        // For FB ads, use the campaign description
+        if (expense.expenseCategory === 'Reclame Facebook') {
+          cheltuialaName = expense.expenseCategory;
+        }
+        
+        // For Copywriting, use the category name
+        if (expense.expenseCategory === 'Copywriting') {
+          cheltuialaName = expense.expenseCategory;
+        }
+        
+        // For Stripe, simplify
+        if (expense.expenseCategory === 'Stripe') {
+          cheltuialaName = 'Stripe';
+        }
+        
+        await createOrUpdatePNLRecord(
+          cheltuialaName, // Individual expense name
+          project,
+          month,
+          year,
+          expense.category, // P&L category (Marketing, Reprezentanti, etc.)
+          expense.amount, // Positive value for expenses
+          expense.description, // Full description
+          stats
         );
-        description = itemDescriptions.join(', ');
-      } else {
-        description = 'Fără cheltuieli';
+      } catch (error) {
+        logger.error('Failed to create/update individual expense P&L record', {
+          project,
+          expense: expense.description,
+          error: error.message
+        });
+        stats.errors++;
       }
-      
-      await createOrUpdatePNLRecord(
-        pnlCategory, // Denumire is the category name (e.g., "Marketing", "Reprezentanti")
-        project,
-        month,
-        year,
-        pnlCategory,
-        expenseAmount, // Positive value for expenses
-        description,
-        stats
-      );
-    } catch (error) {
-      logger.error('Failed to create/update expense P&L record', {
-        project,
-        category: pnlCategory,
-        error: error.message
-      });
-      stats.errors++;
     }
   }
 }
@@ -315,26 +313,26 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
  * Create or update a single P&L record
  */
 async function createOrUpdatePNLRecord(
-  denumire,
+  cheltuialaName,
   project,
   month,
   year,
   category,
-  cheltuieli,
+  suma,
   description,
   stats
 ) {
   try {
-    // Check if record exists
-    const existingRecord = await getPNLRecord(project, month, year, category);
+    // Check if record exists - now search by cheltuiala name too since multiple records per category
+    const existingRecord = await getPNLRecord(project, month, year, category, cheltuialaName);
     
     const recordData = {
-      [FIELDS.PNL_CHELTUIALA]: denumire,
+      [FIELDS.PNL_CHELTUIALA]: cheltuialaName,
       [FIELDS.PNL_PROJECT]: project,
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
       [FIELDS.PNL_CATEGORY]: category,
-      [FIELDS.PNL_SUMA]: cheltuieli,
+      [FIELDS.PNL_SUMA]: suma,
       [FIELDS.PNL_SOURCE]: SOURCE.AUTOMATIC,
       [FIELDS.PNL_DESCRIERE]: description
     };
@@ -343,9 +341,10 @@ async function createOrUpdatePNLRecord(
       // Update existing record
       logger.debug('Updating existing P&L record', {
         recordId: existingRecord.id,
+        cheltuiala: cheltuialaName,
         category,
         oldSuma: existingRecord.suma,
-        newSuma: cheltuieli
+        newSuma: suma
       });
       
       await retryWithBackoff(async () => {
@@ -357,8 +356,9 @@ async function createOrUpdatePNLRecord(
       
       logger.info('✅ Updated P&L record', {
         project,
+        cheltuiala: cheltuialaName,
         category,
-        suma: cheltuieli
+        suma
       });
       
       stats.updated++;
@@ -366,8 +366,9 @@ async function createOrUpdatePNLRecord(
       // Create new record
       logger.debug('Creating new P&L record', {
         project,
+        cheltuiala: cheltuialaName,
         category,
-        suma: cheltuieli
+        suma
       });
       
       await retryWithBackoff(async () => {
@@ -376,8 +377,9 @@ async function createOrUpdatePNLRecord(
       
       logger.info('✅ Created P&L record', {
         project,
+        cheltuiala: cheltuialaName,
         category,
-        suma: cheltuieli
+        suma
       });
       
       stats.created++;
@@ -385,6 +387,7 @@ async function createOrUpdatePNLRecord(
   } catch (error) {
     logger.error('Failed to create/update P&L record', {
       project,
+      cheltuiala: cheltuialaName,
       category,
       error: error.message,
       stack: error.stack
@@ -394,11 +397,14 @@ async function createOrUpdatePNLRecord(
 }
 
 /**
- * Get P&L record by project, month, year, and category
+ * Get P&L record by project, month, year, category, and cheltuiala name
  */
-async function getPNLRecord(project, month, year, category) {
+async function getPNLRecord(project, month, year, category, cheltuialaName) {
   try {
     const results = [];
+    
+    // Escape quotes in cheltuiala name for Airtable formula
+    const escapedCheltuiala = cheltuialaName.replace(/"/g, '\\"');
     
     await retryWithBackoff(async () => {
       await base(TABLES.PNL)
@@ -407,7 +413,8 @@ async function getPNLRecord(project, month, year, category) {
             {${FIELDS.PNL_PROJECT}} = "${project}",
             {${FIELDS.PNL_MONTH}} = "${month}",
             {${FIELDS.PNL_YEAR}} = ${year},
-            {${FIELDS.PNL_CATEGORY}} = "${category}"
+            {${FIELDS.PNL_CATEGORY}} = "${category}",
+            {${FIELDS.PNL_CHELTUIALA}} = "${escapedCheltuiala}"
           )`,
           maxRecords: 1
         })
@@ -431,6 +438,7 @@ async function getPNLRecord(project, month, year, category) {
       month,
       year,
       category,
+      cheltuialaName,
       error: error.message
     });
     return null;
