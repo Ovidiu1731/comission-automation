@@ -78,13 +78,13 @@ export const FIELDS = {
   EXPENSE_ASSOCIATED_SALES: 'Vanzari Asociate',
   
   // P&L's
-  PNL_DENUMIRE: 'Denumire',
+  PNL_CHELTUIALA: 'Cheltuiala',
+  PNL_SUMA: 'Suma',
   PNL_DESCRIERE: 'Descriere',
   PNL_PROJECT: 'Proiect',
   PNL_MONTH: 'Luna',
   PNL_YEAR: 'An',
   PNL_CATEGORY: 'Categorie',
-  PNL_CHELTUIELI: 'Cheltuieli',
   PNL_SOURCE: 'Sursa'
 };
 
@@ -205,8 +205,10 @@ export const COPYWRITING = {
  * @returns {string} Current month name (e.g., "Octombrie")
  */
 export function getCurrentRomanianMonth() {
-  const now = new Date();
-  return ROMANIAN_MONTHS[now.getMonth()];
+  // TEMPORARY: Force October for testing
+  return 'Octombrie';
+  // const now = new Date();
+  // return ROMANIAN_MONTHS[now.getMonth()];
 }
 
 /**
@@ -214,7 +216,8 @@ export function getCurrentRomanianMonth() {
  * @returns {number} Current year (e.g., 2025)
  */
 export function getCurrentYear() {
-  return new Date().getFullYear();
+  return 2025;
+  // return new Date().getFullYear();
 }
 
 /**

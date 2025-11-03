@@ -329,12 +329,12 @@ async function createOrUpdatePNLRecord(
     const existingRecord = await getPNLRecord(project, month, year, category);
     
     const recordData = {
-      [FIELDS.PNL_DENUMIRE]: denumire,
+      [FIELDS.PNL_CHELTUIALA]: denumire,
       [FIELDS.PNL_PROJECT]: project,
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
       [FIELDS.PNL_CATEGORY]: category,
-      [FIELDS.PNL_CHELTUIELI]: cheltuieli,
+      [FIELDS.PNL_SUMA]: cheltuieli,
       [FIELDS.PNL_SOURCE]: SOURCE.AUTOMATIC,
       [FIELDS.PNL_DESCRIERE]: description
     };
@@ -344,8 +344,8 @@ async function createOrUpdatePNLRecord(
       logger.debug('Updating existing P&L record', {
         recordId: existingRecord.id,
         category,
-        oldCheltuieli: existingRecord.cheltuieli,
-        newCheltuieli: cheltuieli
+        oldSuma: existingRecord.suma,
+        newSuma: cheltuieli
       });
       
       await retryWithBackoff(async () => {
@@ -358,7 +358,7 @@ async function createOrUpdatePNLRecord(
       logger.info('✅ Updated P&L record', {
         project,
         category,
-        cheltuieli
+        suma: cheltuieli
       });
       
       stats.updated++;
@@ -367,7 +367,7 @@ async function createOrUpdatePNLRecord(
       logger.debug('Creating new P&L record', {
         project,
         category,
-        cheltuieli
+        suma: cheltuieli
       });
       
       await retryWithBackoff(async () => {
@@ -377,7 +377,7 @@ async function createOrUpdatePNLRecord(
       logger.info('✅ Created P&L record', {
         project,
         category,
-        cheltuieli
+        suma: cheltuieli
       });
       
       stats.created++;
@@ -415,9 +415,9 @@ async function getPNLRecord(project, month, year, category) {
           records.forEach(record => {
             results.push({
               id: record.id,
-              denumire: record.get(FIELDS.PNL_DENUMIRE),
+              cheltuiala: record.get(FIELDS.PNL_CHELTUIALA),
               category: record.get(FIELDS.PNL_CATEGORY),
-              cheltuieli: record.get(FIELDS.PNL_CHELTUIELI)
+              suma: record.get(FIELDS.PNL_SUMA)
             });
           });
           fetchNextPage();
