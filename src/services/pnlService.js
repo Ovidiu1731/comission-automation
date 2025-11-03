@@ -3,13 +3,18 @@ import {
   TABLES, 
   FIELDS, 
   PNL_CATEGORIES,
+  PNL_SUMMARY_RECORDS,
   SOURCE,
   EXPENSE_CATEGORIES,
+  COPYWRITING,
   getCurrentRomanianMonth,
   getCurrentYear
 } from '../config/constants.js';
 import { base } from '../config/airtable.js';
 import { retryWithBackoff } from './airtableService.js';
+
+// EUR/RON exchange rate
+const EUR_RON_RATE = 5.0;
 
 /**
  * Process P&L records for the current month
@@ -239,16 +244,15 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
     expenseCount: expenses?.length || 0
   });
   
-  // 1. Create/Update Revenue (Incasari) record
-  // Revenue is stored as NEGATIVE expense so P&L formula shows it as positive
+  // 1. Create/Update Revenue (Incasari) record under P&L category
   try {
     await createOrUpdatePNLRecord(
-      PNL_CATEGORIES.INCASARI, // Cheltuiala name
+      PNL_SUMMARY_RECORDS.INCASARI, // Cheltuiala name
       project,
       month,
       year,
-      PNL_CATEGORIES.INCASARI,
-      -revenue, // Negative value - revenue is stored as negative expense
+      PNL_CATEGORIES.PNL, // Category is now "P&L"
+      revenue, // POSITIVE value (user requested)
       `${salesCount} vânzări verificate`,
       stats
     );
@@ -307,6 +311,81 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
       }
     }
   }
+  
+  // 3. Create/Update the 5 summary records under P&L category
+  await createPNLSummaryRecords(project, month, year, revenue, expenses, stats);
+}
+
+/**
+ * Create/Update the 5 summary P&L records (TOTAL CHELTUIELI, TOTAL PROFIT, MARJĂ PROFIT)
+ * These records always exist under "P&L" category
+ */
+async function createPNLSummaryRecords(project, month, year, revenue, expenses, stats) {
+  logger.debug('Creating P&L summary records', { project, month, year });
+  
+  // Calculate total expenses (sum of all expense amounts)
+  const totalExpensesRON = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  
+  // Calculate totals in EUR
+  const totalExpensesEUR = totalExpensesRON / EUR_RON_RATE;
+  
+  // Calculate profit
+  const profitRON = revenue - totalExpensesRON;
+  const profitEUR = profitRON / EUR_RON_RATE;
+  
+  // Calculate margin percentage (profit / revenue * 100)
+  const marginPercent = revenue > 0 ? (profitRON / revenue * 100) : 0;
+  
+  // Create/Update each summary record
+  const summaryRecords = [
+    {
+      name: PNL_SUMMARY_RECORDS.TOTAL_CHELTUIELI_RON,
+      suma: totalExpensesRON,
+      description: `Total cheltuieli pentru ${project}`
+    },
+    {
+      name: PNL_SUMMARY_RECORDS.TOTAL_CHELTUIELI_EURO,
+      suma: totalExpensesEUR,
+      description: `Total cheltuieli pentru ${project} (EUR)`
+    },
+    {
+      name: PNL_SUMMARY_RECORDS.TOTAL_PROFIT_RON,
+      suma: profitRON,
+      description: `Profit pentru ${project}`
+    },
+    {
+      name: PNL_SUMMARY_RECORDS.TOTAL_PROFIT_EURO,
+      suma: profitEUR,
+      description: `Profit pentru ${project} (EUR)`
+    },
+    {
+      name: PNL_SUMMARY_RECORDS.MARJA_PROFIT,
+      suma: marginPercent,
+      description: `Marjă profit pentru ${project}`
+    }
+  ];
+  
+  for (const record of summaryRecords) {
+    try {
+      await createOrUpdatePNLRecord(
+        record.name,
+        project,
+        month,
+        year,
+        PNL_CATEGORIES.PNL, // All summary records under P&L category
+        record.suma,
+        record.description,
+        stats
+      );
+    } catch (error) {
+      logger.error('Failed to create/update P&L summary record', {
+        project,
+        recordName: record.name,
+        error: error.message
+      });
+      stats.errors++;
+    }
+  }
 }
 
 /**
@@ -326,13 +405,23 @@ async function createOrUpdatePNLRecord(
     // Check if record exists - now search by cheltuiala name too since multiple records per category
     const existingRecord = await getPNLRecord(project, month, year, category, cheltuialaName);
     
+    // Format suma as text with "RON" prefix or "%" suffix
+    let sumaFormatted;
+    if (cheltuialaName === PNL_SUMMARY_RECORDS.MARJA_PROFIT) {
+      // For margin, format as percentage
+      sumaFormatted = `${suma.toFixed(2)}%`;
+    } else {
+      // For all amounts, format with RON prefix
+      sumaFormatted = `RON ${suma.toFixed(2)}`;
+    }
+    
     const recordData = {
       [FIELDS.PNL_CHELTUIALA]: cheltuialaName,
       [FIELDS.PNL_PROJECT]: project,
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
       [FIELDS.PNL_CATEGORY]: category,
-      [FIELDS.PNL_SUMA]: suma,
+      [FIELDS.PNL_SUMA]: sumaFormatted, // Now formatted as text
       [FIELDS.PNL_SOURCE]: SOURCE.AUTOMATIC,
       [FIELDS.PNL_DESCRIERE]: description
     };

@@ -119,13 +119,23 @@ export const SOURCE = {
 
 // P&L Categories (must match Airtable "Categorie" field options in P&L's table)
 export const PNL_CATEGORIES = {
-  INCASARI: 'Incasari',
+  PNL: 'P&L', // Changed from 'Incasari' - for revenue and summary records
   MARKETING: 'Marketing',
   REPREZENTANTI: 'Reprezentanti',
   CALLERI: 'Calleri',
   SETTERI: 'Setteri',
   TEAM_LEADERS: 'TeamLeaders',
   TAXE_IMPOZITE: 'Taxe & Impozite'
+};
+
+// Fixed P&L summary record names (always present under P&L category)
+export const PNL_SUMMARY_RECORDS = {
+  INCASARI: 'Incasari',
+  TOTAL_CHELTUIELI_RON: 'TOTAL CHELTUIELI RON',
+  TOTAL_CHELTUIELI_EURO: 'TOTAL CHELTUIELI EURO',
+  TOTAL_PROFIT_RON: 'TOTAL PROFIT RON',
+  TOTAL_PROFIT_EURO: 'TOTAL PROFIT EURO',
+  MARJA_PROFIT: 'MARJĂ PROFIT'
 };
 
 // Expense type options
@@ -205,10 +215,8 @@ export const COPYWRITING = {
  * @returns {string} Current month name (e.g., "Octombrie")
  */
 export function getCurrentRomanianMonth() {
-  // TEMPORARY: Force October for testing individual expense records
-  return 'Octombrie';
-  // const now = new Date();
-  // return ROMANIAN_MONTHS[now.getMonth()];
+  const now = new Date();
+  return ROMANIAN_MONTHS[now.getMonth()];
 }
 
 /**
@@ -216,8 +224,7 @@ export function getCurrentRomanianMonth() {
  * @returns {number} Current year (e.g., 2025)
  */
 export function getCurrentYear() {
-  return 2025;
-  // return new Date().getFullYear();
+  return new Date().getFullYear();
 }
 
 /**
