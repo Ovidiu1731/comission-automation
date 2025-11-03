@@ -285,9 +285,10 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
     logger.info(`Found TL rep: id="${representative.id}" name="${representative.name}"`);
     
     // Check if monthly commission record already exists
-    logger.info(`About to search with: repId="${representative.id}" month="${month}"`);
+    // Search by NAME (not ID) because ARRAYJOIN on linked records returns names
+    logger.info(`About to search with: repName="${representative.name}" month="${month}"`);
     const existingCommission = await getMonthlyCommissionByRepAndMonth(
-      representative.id,
+      representative.name,
       month
     );
     logger.info(`Search result: ${existingCommission ? 'FOUND' : 'NOT FOUND'}`);

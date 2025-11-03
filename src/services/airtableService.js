@@ -872,18 +872,19 @@ export async function getRepresentativeByExactName(name) {
 
 /**
  * Get monthly commission record by representative and month
- * @param {string} representativeId - The representative's record ID
+ * @param {string} representativeName - The representative's name (primary field)
  * @param {string} month - Month name (e.g., "Octombrie")
  * @returns {Object|null} Monthly commission record or null
  */
-export async function getMonthlyCommissionByRepAndMonth(representativeId, month) {
-  // Use RECORD_ID() to search by the actual Airtable record ID, not the display name
+export async function getMonthlyCommissionByRepAndMonth(representativeName, month) {
+  // ARRAYJOIN on linked records returns the primary field value (name), not IDs
+  // So we search by the representative's name
   const formula = `AND(
-            FIND("${representativeId}", ARRAYJOIN(RECORD_ID({${FIELDS.REPRESENTATIVE}}))) > 0,
+            FIND("${representativeName}", ARRAYJOIN({${FIELDS.REPRESENTATIVE}})) > 0,
             {${FIELDS.MONTH}} = "${month}"
           )`;
   
-  logger.info(`🔍 SEARCH: repId="${representativeId}" month="${month}"`);
+  logger.info(`🔍 SEARCH: repName="${representativeName}" month="${month}"`);
   
   try {
     const results = [];
@@ -915,13 +916,13 @@ export async function getMonthlyCommissionByRepAndMonth(representativeId, month)
     });
     
     if (results.length === 0) {
-      logger.warn(`❌ NOT FOUND: repId="${representativeId}" month="${month}"`);
+      logger.warn(`❌ NOT FOUND: repName="${representativeName}" month="${month}"`);
     }
     
     return results.length > 0 ? results[0] : null;
   } catch (error) {
     logger.error('Failed to fetch monthly commission by rep and month', {
-      representativeId,
+      representativeName,
       month,
       error: error.message
     });

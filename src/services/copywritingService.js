@@ -416,8 +416,9 @@ async function createOrUpdateCopywriterMonthlyCommission(copywriterName, summary
     });
     
     // Check if monthly commission record already exists
+    // Search by NAME (not ID) because ARRAYJOIN on linked records returns names
     const existingCommission = await getMonthlyCommissionByRepAndMonth(
-      representative.id,
+      representative.name,
       month
     );
     
