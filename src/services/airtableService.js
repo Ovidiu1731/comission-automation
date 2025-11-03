@@ -877,8 +877,9 @@ export async function getRepresentativeByExactName(name) {
  * @returns {Object|null} Monthly commission record or null
  */
 export async function getMonthlyCommissionByRepAndMonth(representativeId, month) {
+  // Use RECORD_ID() to search by the actual Airtable record ID, not the display name
   const formula = `AND(
-            FIND("${representativeId}", ARRAYJOIN({${FIELDS.REPRESENTATIVE}})) > 0,
+            FIND("${representativeId}", ARRAYJOIN(RECORD_ID({${FIELDS.REPRESENTATIVE}}))) > 0,
             {${FIELDS.MONTH}} = "${month}"
           )`;
   
