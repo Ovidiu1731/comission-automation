@@ -84,7 +84,6 @@ export const FIELDS = {
   PNL_MONTH: 'Luna',
   PNL_YEAR: 'An',
   PNL_CATEGORY: 'Categorie',
-  PNL_INCASARI: 'Incasari',
   PNL_CHELTUIELI: 'Cheltuieli',
   PNL_SOURCE: 'Sursa'
 };

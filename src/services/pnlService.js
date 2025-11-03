@@ -244,6 +244,7 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
   
   // 1. Create/Update Revenue (Incasari) record
   // Denumire = category name (e.g., "Incasari")
+  // Revenue is stored as NEGATIVE expense so P&L formula shows it as positive
   try {
     await createOrUpdatePNLRecord(
       PNL_CATEGORIES.INCASARI, // Denumire is the category name
@@ -251,8 +252,7 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
       month,
       year,
       PNL_CATEGORIES.INCASARI,
-      revenue,
-      0, // No expenses for revenue row
+      -revenue, // Negative value - revenue is stored as negative expense
       `${salesCount} vânzări verificate`,
       stats
     );
@@ -296,8 +296,7 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
         month,
         year,
         pnlCategory,
-        0, // No revenue for expense rows
-        expenseAmount,
+        expenseAmount, // Positive value for expenses
         description,
         stats
       );
@@ -321,7 +320,6 @@ async function createOrUpdatePNLRecord(
   month,
   year,
   category,
-  incasari,
   cheltuieli,
   description,
   stats
@@ -336,7 +334,6 @@ async function createOrUpdatePNLRecord(
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
       [FIELDS.PNL_CATEGORY]: category,
-      [FIELDS.PNL_INCASARI]: incasari,
       [FIELDS.PNL_CHELTUIELI]: cheltuieli,
       [FIELDS.PNL_SOURCE]: SOURCE.AUTOMATIC,
       [FIELDS.PNL_DESCRIERE]: description
@@ -361,7 +358,6 @@ async function createOrUpdatePNLRecord(
       logger.info('✅ Updated P&L record', {
         project,
         category,
-        incasari,
         cheltuieli
       });
       
@@ -371,7 +367,6 @@ async function createOrUpdatePNLRecord(
       logger.debug('Creating new P&L record', {
         project,
         category,
-        incasari,
         cheltuieli
       });
       
@@ -382,7 +377,6 @@ async function createOrUpdatePNLRecord(
       logger.info('✅ Created P&L record', {
         project,
         category,
-        incasari,
         cheltuieli
       });
       
@@ -423,7 +417,6 @@ async function getPNLRecord(project, month, year, category) {
               id: record.id,
               denumire: record.get(FIELDS.PNL_DENUMIRE),
               category: record.get(FIELDS.PNL_CATEGORY),
-              incasari: record.get(FIELDS.PNL_INCASARI),
               cheltuieli: record.get(FIELDS.PNL_CHELTUIELI)
             });
           });

@@ -6,6 +6,7 @@
  */
 import dotenv from 'dotenv';
 import cron from 'node-cron';
+import express from 'express';
 import { logger } from './utils/logger.js';
 import {
   getCurrentRomanianMonth,
@@ -22,6 +23,13 @@ import { processPNL } from './services/pnlService.js';
 
 // Load environment variables
 dotenv.config();
+
+// Create Express app
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(express.json());
 
 /**
  * Main processing function
@@ -129,6 +137,67 @@ async function processCommissions() {
 }
 
 /**
+ * Webhook endpoints
+ */
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Manual P&L refresh endpoint
+app.post('/refresh/pnl', async (req, res) => {
+  logger.info('Manual P&L refresh triggered via webhook');
+  
+  try {
+    const pnlResults = await processPNL();
+    
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      results: pnlResults
+    });
+  } catch (error) {
+    logger.error('Manual P&L refresh failed', {
+      error: error.message,
+      stack: error.stack
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Manual full commission processing endpoint
+app.post('/refresh/all', async (req, res) => {
+  logger.info('Manual full refresh triggered via webhook');
+  
+  try {
+    const results = await processCommissions();
+    
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      results
+    });
+  } catch (error) {
+    logger.error('Manual full refresh failed', {
+      error: error.message,
+      stack: error.stack
+    });
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
  * Initialize cron schedule
  */
 function initializeScheduler() {
@@ -158,7 +227,18 @@ function initializeScheduler() {
 function start() {
   logger.info('Starting Commission Automation System', {
     nodeEnv: process.env.NODE_ENV || 'development',
-    version: '1.0.0'
+    version: '1.0.0',
+    port: PORT
+  });
+  
+  // Start Express server
+  app.listen(PORT, () => {
+    logger.info(`Webhook server listening on port ${PORT}`);
+    logger.info('Available endpoints:', {
+      health: `GET /health`,
+      refreshPnl: `POST /refresh/pnl`,
+      refreshAll: `POST /refresh/all`
+    });
   });
   
   // Initialize scheduler
@@ -174,18 +254,19 @@ function start() {
     processCommissions()
       .then(() => {
         if (process.env.NODE_ENV !== 'production') {
-          logger.info('Development run completed. Process will exit.');
-          process.exit(0);
+          logger.info('Development run completed. Webhook server will remain running.');
+          // Don't exit - keep server running for webhook endpoints
         }
       })
       .catch((error) => {
         logger.error('Development run failed', {
           error: error.message
         });
-        process.exit(1);
+        // Don't exit on error - keep server running
+        logger.info('Webhook server will remain running despite error');
       });
   } else {
-    logger.info('Production mode: waiting for scheduled runs only');
+    logger.info('Production mode: waiting for scheduled runs and webhook triggers');
   }
 }
 
