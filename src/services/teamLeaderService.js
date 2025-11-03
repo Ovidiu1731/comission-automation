@@ -282,17 +282,15 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
       return null;
     }
     
-    logger.info('Found team leader representative', {
-      name: representative.name,
-      id: representative.id,
-      role: representative.role
-    });
+    logger.info(`Found TL rep: id="${representative.id}" name="${representative.name}"`);
     
     // Check if monthly commission record already exists
+    logger.info(`About to search with: repId="${representative.id}" month="${month}"`);
     const existingCommission = await getMonthlyCommissionByRepAndMonth(
       representative.id,
       month
     );
+    logger.info(`Search result: ${existingCommission ? 'FOUND' : 'NOT FOUND'}`);
     
     const saleIds = Array.from(summary.saleIds);
     
