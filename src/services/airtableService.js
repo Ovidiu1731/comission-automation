@@ -877,7 +877,16 @@ export async function getRepresentativeByExactName(name) {
  * @returns {Object|null} Monthly commission record or null
  */
 export async function getMonthlyCommissionByRepAndMonth(representativeId, month) {
-  logger.debug('Fetching monthly commission by rep and month', { representativeId, month });
+  const formula = `AND(
+            FIND("${representativeId}", ARRAYJOIN({${FIELDS.REPRESENTATIVE}})) > 0,
+            {${FIELDS.MONTH}} = "${month}"
+          )`;
+  
+  logger.info('🔍 Searching for existing monthly commission', { 
+    representativeId, 
+    month,
+    formula 
+  });
   
   try {
     const results = [];
@@ -885,15 +894,12 @@ export async function getMonthlyCommissionByRepAndMonth(representativeId, month)
     await retryWithBackoff(async () => {
       await base(TABLES.MONTHLY_COMMISSIONS)
         .select({
-          filterByFormula: `AND(
-            FIND("${representativeId}", ARRAYJOIN({${FIELDS.REPRESENTATIVE}})) > 0,
-            {${FIELDS.MONTH}} = "${month}"
-          )`,
+          filterByFormula: formula,
           maxRecords: 1
         })
         .eachPage((records, fetchNextPage) => {
           records.forEach(record => {
-            results.push({
+            const existingRec = {
               id: record.id,
               name: record.get(FIELDS.NAME),
               representative: record.get(FIELDS.REPRESENTATIVE),
@@ -901,11 +907,25 @@ export async function getMonthlyCommissionByRepAndMonth(representativeId, month)
               sales: record.get(FIELDS.SALES) || [],
               finalCommission: record.get(FIELDS.FINAL_COMMISSION),
               role: record.get(FIELDS.ROLE)
+            };
+            
+            logger.info('✅ FOUND existing monthly commission', {
+              recordId: existingRec.id,
+              name: existingRec.name,
+              repIds: existingRec.representative,
+              month: existingRec.month,
+              salesCount: existingRec.sales.length
             });
+            
+            results.push(existingRec);
           });
           fetchNextPage();
         });
     });
+    
+    if (results.length === 0) {
+      logger.warn('❌ NO existing monthly commission found', { representativeId, month });
+    }
     
     return results.length > 0 ? results[0] : null;
   } catch (error) {
@@ -924,13 +944,16 @@ export async function getMonthlyCommissionByRepAndMonth(representativeId, month)
  * @returns {Object|null} Created record or null
  */
 export async function createMonthlyCommission(commissionData) {
-  const repName = commissionData.fields?.[FIELDS.REPRESENTATIVE]?.[0] || 'Unknown';
+  const repId = commissionData.fields?.[FIELDS.REPRESENTATIVE]?.[0] || 'Unknown';
   const month = commissionData.fields?.[FIELDS.MONTH];
+  const salesCount = commissionData.fields?.[FIELDS.SALES]?.length || 0;
   
-  logger.info('Creating monthly commission record', { 
-    representative: repName,
+  logger.warn('⚠️  CREATING NEW monthly commission record', { 
+    representativeId: repId,
     month,
-    salesCount: commissionData.fields?.[FIELDS.SALES]?.length || 0
+    salesCount,
+    timestamp: new Date().toISOString(),
+    callStack: new Error().stack?.split('\n').slice(1, 4).join('\n')
   });
   
   try {
@@ -941,10 +964,11 @@ export async function createMonthlyCommission(commissionData) {
       createdRecord = records[0];
     });
     
-    logger.info('Created monthly commission record', { 
+    logger.info('✅ Created monthly commission record', { 
       recordId: createdRecord?.id,
-      representative: repName,
-      month
+      representativeId: repId,
+      month,
+      salesCount
     });
     
     return createdRecord ? {
@@ -972,9 +996,12 @@ export async function createMonthlyCommission(commissionData) {
  * @returns {boolean} Success status
  */
 export async function updateMonthlyCommission(recordId, updateData) {
-  logger.info('Updating monthly commission record', { 
+  logger.info('🔄 UPDATING existing monthly commission record', { 
     recordId,
-    updateFields: Object.keys(updateData.fields || {})
+    updateFields: Object.keys(updateData.fields || {}),
+    salesCount: updateData.fields?.[FIELDS.SALES]?.length,
+    teamLeaderCommission: updateData.fields?.[FIELDS.TEAM_LEADER_COMMISSION],
+    timestamp: new Date().toISOString()
   });
   
   try {
@@ -985,8 +1012,9 @@ export async function updateMonthlyCommission(recordId, updateData) {
       }]);
     });
     
-    logger.info('Updated monthly commission record', { 
-      recordId
+    logger.info('✅ Updated monthly commission record successfully', { 
+      recordId,
+      salesCount: updateData.fields?.[FIELDS.SALES]?.length
     });
     
     return true;
