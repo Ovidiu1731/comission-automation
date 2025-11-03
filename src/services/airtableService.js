@@ -144,24 +144,27 @@ export async function getMonthlySetterCallerCommissions(month) {
             const role = record.get(FIELDS.ROLE);
             const setterCallerCommission = record.get(FIELDS.SETTER_CALLER_SUM);
             
-            // Only include if role contains "Caller" or "Setter" and has valid commission
+            // Only include if role contains "Caller" or "Setter"
             const roles = Array.isArray(role) ? role : [role];
             const isSetterCaller = roles.some(r => r === 'Caller' || r === 'Setter');
+            const salesCount = (record.get(FIELDS.SALES) || []).length;
             
-            if (isSetterCaller && setterCallerCommission > 0) {
+            // Include if Setter/Caller AND has sales (don't filter by commission amount as formula might not be calculated yet)
+            if (isSetterCaller && salesCount > 0) {
               results.push({
                 id: record.id,
                 name: record.get(FIELDS.NAME),
                 representative: record.get(FIELDS.REPRESENTATIVE),
                 month: record.get(FIELDS.MONTH),
-                setterCallerCommission: setterCallerCommission,
+                setterCallerCommission: setterCallerCommission || 0,
                 sales: record.get(FIELDS.SALES) || [],
                 role: roles
               });
             } else {
-              logger.debug('Skipping commission - not Setter/Caller or zero commission', {
+              logger.debug('Skipping commission - not Setter/Caller or no sales', {
                 id: record.id,
                 role: roles,
+                salesCount: salesCount,
                 commission: setterCallerCommission
               });
             }
