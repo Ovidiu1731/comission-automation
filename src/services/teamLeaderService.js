@@ -26,8 +26,7 @@ import {
   SOURCE,
   TEAM_LEADERS,
   getCurrentRomanianMonth,
-  getCurrentYear,
-  getCurrentMonthYearString
+  getCurrentYear
 } from '../config/constants.js';
 import {
   isValidExpenseAmount,
@@ -42,13 +41,11 @@ import { logger } from '../utils/logger.js';
 export async function processTeamLeaderCommissions() {
   const month = getCurrentRomanianMonth();
   const year = getCurrentYear();
-  const monthYear = getCurrentMonthYearString(); // e.g., "Octombrie 2025"
   
   logger.info('=== Processing Team Leader Commissions ===');
   logger.info('Using monthly commission records from "Comisioane Lunare"');
   logger.info('Month:', month);
   logger.info('Year:', year);
-  logger.info('Month-Year for query:', monthYear);
   
   const stats = {
     processed: 0,
@@ -65,10 +62,10 @@ export async function processTeamLeaderCommissions() {
   try {
     // Get all monthly commissions for Setters/Callers
     // This is THE SAME source that SetterCallerService uses
-    const commissions = await getMonthlySetterCallerCommissions(monthYear);
+    const commissions = await getMonthlySetterCallerCommissions(month);
     
     if (commissions.length === 0) {
-      logger.info('No Setter/Caller commissions found for Team Leader processing', { monthYear });
+      logger.info('No Setter/Caller commissions found for Team Leader processing', { month });
       return stats;
     }
     
@@ -221,7 +218,8 @@ export async function processTeamLeaderCommissions() {
         await createOrUpdateTeamLeaderMonthlyCommission(
           teamLeaderName,
           summary,
-          monthYear
+          month,
+          year
         );
       } catch (error) {
         logger.error('Failed to create/update team leader monthly commission', {
@@ -266,12 +264,11 @@ export async function processTeamLeaderCommissions() {
 /**
  * Create or update Team Leader monthly commission record in "Comisioane Lunare" table
  */
-async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary, monthYear) {
+async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary, month, year) {
   logger.info('Creating/updating monthly commission for team leader', {
     teamLeaderName,
     totalCommission: summary.totalCommission.toFixed(2),
-    salesCount: summary.salesCount,
-    monthYear
+    salesCount: summary.salesCount
   });
   
   try {
@@ -294,7 +291,7 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
     // Check if monthly commission record already exists
     const existingCommission = await getMonthlyCommissionByRepAndMonth(
       representative.id,
-      monthYear
+      month
     );
     
     const saleIds = Array.from(summary.saleIds);
@@ -319,7 +316,7 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
       logger.info('✅ Updated monthly commission record for team leader', {
         recordId: existingCommission.id,
         teamLeaderName,
-        monthYear,
+        month,
         salesCount: saleIds.length,
         totalCommission: summary.totalCommission.toFixed(2)
       });
@@ -327,7 +324,7 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
       // Create new record
       logger.info('Creating new monthly commission record for team leader', {
         teamLeaderName,
-        monthYear,
+        month,
         salesCount: saleIds.length,
         totalCommission: summary.totalCommission.toFixed(2)
       });
@@ -335,7 +332,7 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
       await createMonthlyCommission({
         fields: {
           [FIELDS.REPRESENTATIVE]: [representative.id],
-          [FIELDS.MONTH]: monthYear,
+          [FIELDS.MONTH]: month,
           [FIELDS.SALES]: saleIds,
           [FIELDS.TEAM_LEADER_COMMISSION]: summary.totalCommission
         }
@@ -343,7 +340,7 @@ async function createOrUpdateTeamLeaderMonthlyCommission(teamLeaderName, summary
       
       logger.info('✅ Created monthly commission record for team leader', {
         teamLeaderName,
-        monthYear,
+        month,
         salesCount: saleIds.length,
         totalCommission: summary.totalCommission.toFixed(2)
       });

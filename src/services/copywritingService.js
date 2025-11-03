@@ -22,8 +22,7 @@ import {
   SOURCE,
   COPYWRITING,
   getCurrentRomanianMonth,
-  getCurrentYear,
-  getCurrentMonthYearString
+  getCurrentYear
 } from '../config/constants.js';
 import {
   isValidExpenseAmount,
@@ -137,12 +136,11 @@ function calculateProgressiveCommission(totalSalesRON) {
 export async function processCopywritingCommissions() {
   const month = getCurrentRomanianMonth();
   const year = getCurrentYear();
-  const monthYear = getCurrentMonthYearString(); // e.g., "Octombrie 2025"
+  const monthYear = `${month} ${year}`;
   
   logger.info('=== Processing Copywriting Commissions ===', { 
     month, 
     year,
-    monthYear,
     copywriter: COPYWRITING.copywriter.name,
     tiers: COPYWRITING.tiers
   });
@@ -313,7 +311,8 @@ export async function processCopywritingCommissions() {
           salesCount: validSales.length,
           saleIds: allSaleIds
         },
-        monthYear
+        month,
+        year
       );
     } catch (error) {
       logger.error('Failed to create/update copywriter monthly commission', {
@@ -392,12 +391,11 @@ export async function processCopywritingCommissions() {
 /**
  * Create or update Copywriter monthly commission record in "Comisioane Lunare" table
  */
-async function createOrUpdateCopywriterMonthlyCommission(copywriterName, summary, monthYear) {
+async function createOrUpdateCopywriterMonthlyCommission(copywriterName, summary, month, year) {
   logger.info('Creating/updating monthly commission for copywriter', {
     copywriterName,
     totalCommission: summary.totalCommission.toFixed(2),
-    salesCount: summary.salesCount,
-    monthYear
+    salesCount: summary.salesCount
   });
   
   try {
@@ -420,7 +418,7 @@ async function createOrUpdateCopywriterMonthlyCommission(copywriterName, summary
     // Check if monthly commission record already exists
     const existingCommission = await getMonthlyCommissionByRepAndMonth(
       representative.id,
-      monthYear
+      month
     );
     
     const saleIds = summary.saleIds;
@@ -443,28 +441,28 @@ async function createOrUpdateCopywriterMonthlyCommission(copywriterName, summary
       logger.info('✅ Updated monthly commission record for copywriter', {
         recordId: existingCommission.id,
         copywriterName,
-        monthYear,
+        month,
         salesCount: saleIds.length
       });
     } else {
       // Create new record
       logger.info('Creating new monthly commission record for copywriter', {
         copywriterName,
-        monthYear,
+        month,
         salesCount: saleIds.length
       });
       
       await createMonthlyCommission({
         fields: {
           [FIELDS.REPRESENTATIVE]: [representative.id],
-          [FIELDS.MONTH]: monthYear,
+          [FIELDS.MONTH]: month,
           [FIELDS.SALES]: saleIds
         }
       });
       
       logger.info('✅ Created monthly commission record for copywriter', {
         copywriterName,
-        monthYear,
+        month,
         salesCount: saleIds.length
       });
     }
