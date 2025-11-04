@@ -8,7 +8,8 @@ import axios from 'axios';
 import {
   getExpenseByExpenseId,
   createExpense,
-  updateExpense
+  updateExpense,
+  getAllMonthYearsFromSales
 } from './airtableService.js';
 import { ensureValidToken } from './facebookTokenService.js';
 import {
@@ -354,16 +355,102 @@ async function createOrUpdateFacebookAdsExpense(group, month, year) {
 }
 
 /**
- * Main function to process Facebook Ads expenses
+ * Helper function to convert Romanian month name to month number (1-12)
+ */
+function romanianMonthToNumber(month) {
+  const months = {
+    'Ianuarie': 1,
+    'Februarie': 2,
+    'Martie': 3,
+    'Aprilie': 4,
+    'Mai': 5,
+    'Iunie': 6,
+    'Iulie': 7,
+    'August': 8,
+    'Septembrie': 9,
+    'Octombrie': 10,
+    'Noiembrie': 11,
+    'Decembrie': 12
+  };
+  return months[month] || new Date().getMonth() + 1;
+}
+
+/**
+ * Helper function to get the last day of a month
+ */
+function getLastDayOfMonth(year, month) {
+  return new Date(year, month, 0).getDate();
+}
+
+/**
+ * Main function to process Facebook Ads expenses for ALL months
  * @returns {Promise<Object>} - Processing statistics
  */
 export async function processFacebookAds() {
-  const month = getCurrentRomanianMonth();
-  const year = getCurrentYear();
+  logger.info('=== Processing Facebook Ads Expenses for ALL months ===');
   
-  logger.info('=== Processing Facebook Ads Expenses ===');
-  logger.info('Month:', month);
-  logger.info('Year:', year);
+  try {
+    const monthYears = await getAllMonthYearsFromSales();
+    
+    if (monthYears.length === 0) {
+      return {
+        campaignsProcessed: 0,
+        projectsWithSpend: 0,
+        totalSpend: 0,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        errors: 0
+      };
+    }
+    
+    logger.info(`Processing Facebook Ads for ${monthYears.length} month-years: ${monthYears.join(', ')}`);
+    
+    let totalStats = {
+      campaignsProcessed: 0,
+      projectsWithSpend: 0,
+      totalSpend: 0,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: 0
+    };
+    
+    for (const monthYear of monthYears) {
+      logger.info(`\n========== Processing Facebook Ads for: ${monthYear} ==========`);
+      const result = await processFacebookAdsForMonthYear(monthYear);
+      totalStats.campaignsProcessed += result.campaignsProcessed;
+      totalStats.projectsWithSpend += result.projectsWithSpend;
+      totalStats.totalSpend += result.totalSpend;
+      totalStats.created += result.created;
+      totalStats.updated += result.updated;
+      totalStats.skipped += result.skipped;
+      totalStats.errors += result.errors;
+    }
+    
+    logger.info('Completed Facebook Ads processing for all months', totalStats);
+    return totalStats;
+  } catch (error) {
+    logger.error('Facebook Ads processing failed', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Process Facebook Ads expenses for a specific month-year
+ * @param {string} monthYear - Month-year string (e.g., "Octombrie 2025")
+ * @returns {Promise<Object>} - Processing statistics
+ */
+async function processFacebookAdsForMonthYear(monthYear) {
+  // Parse month-year (format: "Luna YYYY")
+  const parts = monthYear.split(' ');
+  const month = parts[0];
+  const year = parseInt(parts[1]);
+  
+  logger.info('Processing Facebook Ads for month-year', { monthYear, month, year });
   
   const stats = {
     campaignsProcessed: 0,
@@ -398,16 +485,19 @@ export async function processFacebookAds() {
       throw new Error('Ad Account currency is not RON');
     }
     
-    // Calculate date range for current month
-    const startDate = `${year}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
-    const today = new Date();
-    const endDate = `${year}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    // Calculate date range for the specific month
+    const monthNumber = romanianMonthToNumber(month);
+    const lastDay = getLastDayOfMonth(year, monthNumber);
+    const startDate = `${year}-${String(monthNumber).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(monthNumber).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    
+    logger.info('Fetching Facebook Ads data for date range', { startDate, endDate });
     
     // Fetch ad spend data
     const campaigns = await fetchAdSpend(adAccountId, accessToken, startDate, endDate);
     
     if (campaigns.length === 0) {
-      logger.info('No Facebook campaigns found for this month');
+      logger.info('No Facebook campaigns found for this month-year', { monthYear });
       return stats;
     }
     
@@ -466,7 +556,8 @@ export async function processFacebookAds() {
     
     return stats;
   } catch (error) {
-    logger.error('Facebook Ads processing failed', {
+    logger.error('Facebook Ads processing failed for month-year', {
+      monthYear,
       error: error.message,
       stack: error.stack
     });
