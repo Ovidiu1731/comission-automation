@@ -197,6 +197,35 @@ app.post('/refresh/all', async (req, res) => {
   }
 });
 
+// Webhook endpoint for Airtable automation when manual Cheltuieli record is created
+app.post('/webhook/cheltuieli-created', async (req, res) => {
+  logger.info('Cheltuieli record created webhook triggered', {
+    body: req.body
+  });
+  
+  // Respond immediately to Airtable (don't make it wait)
+  res.json({
+    success: true,
+    message: 'P&L refresh queued',
+    timestamp: new Date().toISOString()
+  });
+  
+  // Process P&L asynchronously (don't block the response)
+  try {
+    logger.info('Processing P&L update due to manual Cheltuieli entry...');
+    const pnlResults = await processPNL();
+    
+    logger.info('P&L updated successfully after manual Cheltuieli entry', {
+      results: pnlResults
+    });
+  } catch (error) {
+    logger.error('Failed to update P&L after manual Cheltuieli entry', {
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 /**
  * Initialize cron schedule
  */
@@ -237,7 +266,8 @@ function start() {
     logger.info('Available endpoints:', {
       health: `GET /health`,
       refreshPnl: `POST /refresh/pnl`,
-      refreshAll: `POST /refresh/all`
+      refreshAll: `POST /refresh/all`,
+      cheltuieliCreated: `POST /webhook/cheltuieli-created`
     });
   });
   
