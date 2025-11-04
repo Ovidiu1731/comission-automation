@@ -7,6 +7,7 @@
 import dotenv from 'dotenv';
 import cron from 'node-cron';
 import express from 'express';
+import cors from 'cors';
 import { logger } from './utils/logger.js';
 import {
   getCurrentRomanianMonth,
@@ -29,6 +30,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+app.use(cors()); // Enable CORS for all routes (allows Airtable scripts to call our API)
 app.use(express.json());
 
 /**
