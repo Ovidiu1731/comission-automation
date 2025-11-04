@@ -10,6 +10,7 @@
  */
 import {
   getMonthlySetterCallerCommissions,
+  getAllMonthsWithCommissions,
   getSalesByIds,
   getExpenseByExpenseId,
   createExpense,
@@ -31,20 +32,78 @@ import {
   isValidExpenseAmount,
   isValidProject
 } from '../utils/validators.js';
-import { logger } from '../utils/logger.js';
+import { logger} from '../utils/logger.js';
 
 /**
- * Process all Team Leader commissions for current month
+ * Process all Team Leader commissions for ALL months
  * Uses monthly commission records from "Comisioane Lunare" as source of truth
  */
 export async function processTeamLeaderCommissions() {
-  const month = getCurrentRomanianMonth();
+  logger.info('=== Processing Team Leader Commissions for ALL months ===');
+  
+  try {
+    const months = await getAllMonthsWithCommissions();
+    
+    if (months.length === 0) {
+      return {
+        processed: 0,
+        setterSales: 0,
+        callerSales: 0,
+        skipped: 0,
+        created: 0,
+        updated: 0,
+        errors: 0,
+        georgeCoapsiTotal: 0,
+        alexandruPrisiceanuTotal: 0
+      };
+    }
+    
+    logger.info(`Processing Team Leader commissions for ${months.length} months: ${months.join(', ')}`);
+    
+    let totalStats = {
+      processed: 0,
+      setterSales: 0,
+      callerSales: 0,
+      skipped: 0,
+      created: 0,
+      updated: 0,
+      errors: 0,
+      georgeCoapsiTotal: 0,
+      alexandruPrisiceanuTotal: 0
+    };
+    
+    for (const month of months) {
+      logger.info(`\n========== Processing Team Leader for month: ${month} ==========`);
+      const result = await processTeamLeaderCommissionsForMonth(month);
+      totalStats.processed += result.processed;
+      totalStats.setterSales += result.setterSales;
+      totalStats.callerSales += result.callerSales;
+      totalStats.skipped += result.skipped;
+      totalStats.created += result.created;
+      totalStats.updated += result.updated;
+      totalStats.errors += result.errors;
+      totalStats.georgeCoapsiTotal += result.georgeCoapsiTotal;
+      totalStats.alexandruPrisiceanuTotal += result.alexandruPrisiceanuTotal;
+    }
+    
+    logger.info('Completed Team Leader commission processing for all months', totalStats);
+    return totalStats;
+  } catch (error) {
+    logger.error('Failed to process Team Leader commissions', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Process Team Leader commissions for a specific month
+ */
+async function processTeamLeaderCommissionsForMonth(month) {
   const year = getCurrentYear();
   
-  logger.info('=== Processing Team Leader Commissions ===');
-  logger.info('Using monthly commission records from "Comisioane Lunare"');
-  logger.info('Month:', month);
-  logger.info('Year:', year);
+  logger.info('Processing Team Leader commissions for month', { month, year });
   
   const stats = {
     processed: 0,

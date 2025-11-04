@@ -101,6 +101,44 @@ export async function getAllMonthsWithCommissions() {
 }
 
 /**
+ * Get all unique month-year combinations from sales table
+ */
+export async function getAllMonthYearsFromSales() {
+  logger.info('Fetching all unique month-year combinations from sales');
+  
+  try {
+    const monthYearsSet = new Set();
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.SALES)
+        .select({
+          fields: [FIELDS.SALE_MONTH],
+          maxRecords: 10000
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            const monthYear = record.get(FIELDS.SALE_MONTH);
+            if (monthYear) {
+              monthYearsSet.add(monthYear);
+            }
+          });
+          fetchNextPage();
+        });
+    });
+    
+    const monthYears = Array.from(monthYearsSet);
+    logger.info('Found unique month-years', { monthYears, count: monthYears.length });
+    return monthYears;
+  } catch (error) {
+    logger.error('Failed to fetch unique month-years', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
  * Get all monthly commission records for current month
  * Filtered by role = "Sales" only
  */
