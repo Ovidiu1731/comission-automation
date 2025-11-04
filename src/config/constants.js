@@ -195,7 +195,7 @@ export const COPYWRITING = {
     { max: 25000, rate: 0.075 },    // 7.5% €10,001-€25,000
     { max: Infinity, rate: 0.10 }   // 10% over €25,001
   ],
-  eurRonRate: 5.0 // Approximate EUR/RON exchange rate (RON / EUR)
+  eurRonRate: 5.08 // Fixed EUR/RON exchange rate per client requirement (RON / EUR)
 };
 
 /**

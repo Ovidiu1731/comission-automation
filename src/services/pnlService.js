@@ -13,8 +13,8 @@ import {
 import { base } from '../config/airtable.js';
 import { retryWithBackoff } from './airtableService.js';
 
-// EUR/RON exchange rate
-const EUR_RON_RATE = 5.0;
+// EUR/RON exchange rate (fixed per client requirement)
+const EUR_RON_RATE = 5.08;
 
 // Delay helper to prevent rate limiting
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -217,13 +217,12 @@ async function getExpensesByProject(month, year) {
  */
 function mapExpenseCategoryToPNL(expenseCategory) {
   const mapping = {
-    [EXPENSE_CATEGORIES.FACEBOOK_ADS]: PNL_CATEGORIES.MARKETING,
-    [EXPENSE_CATEGORIES.COPYWRITING]: PNL_CATEGORIES.MARKETING,
+    [EXPENSE_CATEGORIES.MARKETING]: PNL_CATEGORIES.MARKETING, // Facebook Ads & Copywriting
     [EXPENSE_CATEGORIES.REPRESENTATIVES]: PNL_CATEGORIES.REPREZENTANTI,
-    [EXPENSE_CATEGORIES.CALLER]: PNL_CATEGORIES.CALLERI,
-    [EXPENSE_CATEGORIES.SETTER]: PNL_CATEGORIES.SETTERI,
+    [EXPENSE_CATEGORIES.CALLERI]: PNL_CATEGORIES.CALLERI, // Fixed: was using non-existent EXPENSE_CATEGORIES.CALLER
+    [EXPENSE_CATEGORIES.SETTERI]: PNL_CATEGORIES.SETTERI, // Fixed: was using non-existent EXPENSE_CATEGORIES.SETTER
     [EXPENSE_CATEGORIES.TEAM_LEADER]: null, // Will be handled separately based on description
-    [EXPENSE_CATEGORIES.STRIPE]: PNL_CATEGORIES.TAXE_IMPOZITE
+    [EXPENSE_CATEGORIES.TAXE_IMPOZITE]: PNL_CATEGORIES.TAXE_IMPOZITE // Stripe fees
   };
   
   // Special handling for Team Leaders
@@ -277,24 +276,21 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
         // Extract name from description (e.g., "Comision Mario Cazacu" -> "Mario Cazacu")
         let cheltuialaName = expense.description;
         
+        // For Facebook Ads, simplify to just "Facebook Ads"
+        if (expense.description.includes('Facebook Ads')) {
+          cheltuialaName = 'Facebook Ads';
+        }
+        // For Stripe, simplify to just "Stripe"
+        else if (expense.description.includes('Stripe') || expense.description.includes('stripe')) {
+          cheltuialaName = 'Stripe';
+        }
         // For commission expenses, clean up the description
-        if (expense.description.includes('Comision')) {
+        else if (expense.description.includes('Comision')) {
           cheltuialaName = expense.description.replace(/^Comision\s+/, '');
         }
-        
-        // For FB ads, use the campaign description
-        if (expense.expenseCategory === 'Reclame Facebook') {
-          cheltuialaName = expense.expenseCategory;
-        }
-        
         // For Copywriting, use the category name
-        if (expense.expenseCategory === 'Copywriting') {
+        else if (expense.expenseCategory === 'Copywriting') {
           cheltuialaName = expense.expenseCategory;
-        }
-        
-        // For Stripe, simplify
-        if (expense.expenseCategory === 'Stripe') {
-          cheltuialaName = 'Stripe';
         }
         
         await createOrUpdatePNLRecord(

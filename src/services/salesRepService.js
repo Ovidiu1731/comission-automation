@@ -210,12 +210,14 @@ async function processSalesRepCommission(commission, month, year) {
     return { created: 0, updated: 0, skipped: 1 };
   }
   
-  // Group sales by project and sum commissions
+  // Group sales by project and track sale amounts (not commissions)
+  // We'll allocate the finalCommission from Comisioane Lunare proportionally
   const projectGroups = {};
+  let totalSalesAmount = 0;
   
   for (const sale of sales) {
     const project = sale.project;
-    const saleCommission = sale.finalCommission || 0;
+    const saleAmount = sale.totalAmount || 0;  // Use sale AMOUNT, not commission
     
     if (!project) {
       logger.debug('Sale missing project, skipping', { saleId: sale.id });
@@ -230,25 +232,26 @@ async function processSalesRepCommission(commission, month, year) {
       continue;
     }
     
-    if (saleCommission <= 0) {
-      logger.debug('Sale commission is zero or invalid, skipping', {
+    if (saleAmount <= 0) {
+      logger.debug('Sale amount is zero or invalid, skipping', {
         saleId: sale.id,
-        commission: saleCommission
+        amount: saleAmount
       });
       continue;
     }
     
     if (!projectGroups[project]) {
       projectGroups[project] = {
-        totalCommission: 0,
+        totalAmount: 0,  // Track sale amounts, not commissions
         salesCount: 0,
         saleIds: []
       };
     }
     
-    projectGroups[project].totalCommission += saleCommission;
+    projectGroups[project].totalAmount += saleAmount;
     projectGroups[project].salesCount++;
     projectGroups[project].saleIds.push(sale.id);
+    totalSalesAmount += saleAmount;
   }
   
   if (Object.keys(projectGroups).length === 0) {
@@ -256,7 +259,15 @@ async function processSalesRepCommission(commission, month, year) {
     return { created: 0, updated: 0, skipped: 1 };
   }
   
-  // Create expense for each project (combining all sales for that project)
+  // Log the allocation breakdown
+  logger.info('Commission allocation breakdown', {
+    commissionId,
+    totalCommissionFromComisioane: netCommission,
+    totalSalesAmount: totalSalesAmount,
+    projectCount: Object.keys(projectGroups).length
+  });
+  
+  // Create expense for each project with proportional allocation
   let created = 0;
   let updated = 0;
   let skipped = 0;
@@ -268,15 +279,22 @@ async function processSalesRepCommission(commission, month, year) {
   });
   
   for (const [project, group] of Object.entries(projectGroups)) {
-    logger.info('Processing project', { 
+    // Calculate proportional allocation based on sale amounts
+    const allocationPercentage = totalSalesAmount > 0 ? (group.totalAmount / totalSalesAmount) : 0;
+    const allocatedCommission = netCommission * allocationPercentage;
+    
+    logger.info('Processing project with proportional allocation', { 
       commissionId, 
       project, 
-      totalCommission: group.totalCommission,
+      projectSalesAmount: group.totalAmount,
+      totalSalesAmount: totalSalesAmount,
+      allocationPercentage: (allocationPercentage * 100).toFixed(2) + '%',
+      allocatedCommission: allocatedCommission.toFixed(2),
       salesCount: group.salesCount
     });
     
     // Round to 2 decimal places
-    const roundedCommission = Math.round(group.totalCommission * 100) / 100;
+    const roundedCommission = Math.round(allocatedCommission * 100) / 100;
     
     // Generate unique expense ID per project
     const expenseId = `commission_${commissionId}_${project}`;
