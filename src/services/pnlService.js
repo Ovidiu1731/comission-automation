@@ -16,6 +16,9 @@ import { retryWithBackoff } from './airtableService.js';
 // EUR/RON exchange rate
 const EUR_RON_RATE = 5.0;
 
+// Delay helper to prevent rate limiting
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * Process P&L records for the current month
  * Creates/updates P&L records showing revenue and expenses by project
@@ -73,6 +76,9 @@ export async function processPNL() {
         
         // Create/update P&L records for this project
         await createOrUpdatePNLRecords(project, month, year, revenue, salesCount, expenses, stats);
+        
+        // Add delay between projects to prevent rate limiting
+        await delay(500); // 500ms between projects
         
         stats.processed++;
       } catch (error) {
@@ -301,6 +307,9 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
           expense.description, // Full description
           stats
         );
+        
+        // Small delay between expense records to prevent rate limiting
+        await delay(200); // 200ms between records
       } catch (error) {
         logger.error('Failed to create/update individual expense P&L record', {
           project,
@@ -370,6 +379,9 @@ async function createPNLSummaryRecords(project, month, year, revenue, expenses, 
         stats,
         record.sumaEURO // Pass EUR amount explicitly
       );
+      
+      // Small delay between summary records
+      await delay(200); // 200ms between records
     } catch (error) {
       logger.error('Failed to create/update P&L summary record', {
         project,
