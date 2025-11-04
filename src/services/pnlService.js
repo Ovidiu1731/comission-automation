@@ -317,16 +317,15 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
 }
 
 /**
- * Create/Update the 5 summary P&L records (TOTAL CHELTUIELI, TOTAL PROFIT, MARJĂ PROFIT)
+ * Create/Update the 4 summary P&L records (TOTAL CHELTUIELI, TOTAL PROFIT, MARJĂ PROFIT)
  * These records always exist under "P&L" category
+ * Each record has both RON and EURO columns populated
  */
 async function createPNLSummaryRecords(project, month, year, revenue, expenses, stats) {
   logger.debug('Creating P&L summary records', { project, month, year });
   
   // Calculate total expenses (sum of all expense amounts)
   const totalExpensesRON = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  
-  // Calculate totals in EUR
   const totalExpensesEUR = totalExpensesRON / EUR_RON_RATE;
   
   // Calculate profit
@@ -336,31 +335,24 @@ async function createPNLSummaryRecords(project, month, year, revenue, expenses, 
   // Calculate margin percentage (profit / revenue * 100)
   const marginPercent = revenue > 0 ? (profitRON / revenue * 100) : 0;
   
-  // Create/Update each summary record
+  // Create/Update each summary record (4 records total)
   const summaryRecords = [
     {
-      name: PNL_SUMMARY_RECORDS.TOTAL_CHELTUIELI_RON,
-      suma: totalExpensesRON,
+      name: PNL_SUMMARY_RECORDS.TOTAL_CHELTUIELI,
+      sumaRON: totalExpensesRON,
+      sumaEURO: totalExpensesEUR,
       description: `Total cheltuieli pentru ${project}`
     },
     {
-      name: PNL_SUMMARY_RECORDS.TOTAL_CHELTUIELI_EURO,
-      suma: totalExpensesEUR,
-      description: `Total cheltuieli pentru ${project} (EUR)`
-    },
-    {
-      name: PNL_SUMMARY_RECORDS.TOTAL_PROFIT_RON,
-      suma: profitRON,
+      name: PNL_SUMMARY_RECORDS.TOTAL_PROFIT,
+      sumaRON: profitRON,
+      sumaEURO: profitEUR,
       description: `Profit pentru ${project}`
     },
     {
-      name: PNL_SUMMARY_RECORDS.TOTAL_PROFIT_EURO,
-      suma: profitEUR,
-      description: `Profit pentru ${project} (EUR)`
-    },
-    {
       name: PNL_SUMMARY_RECORDS.MARJA_PROFIT,
-      suma: marginPercent,
+      sumaRON: marginPercent, // Store as number for margin
+      sumaEURO: marginPercent, // Same value in both columns for percentage
       description: `Marjă profit pentru ${project}`
     }
   ];
@@ -373,9 +365,10 @@ async function createPNLSummaryRecords(project, month, year, revenue, expenses, 
         month,
         year,
         PNL_CATEGORIES.PNL, // All summary records under P&L category
-        record.suma,
+        record.sumaRON,
         record.description,
-        stats
+        stats,
+        record.sumaEURO // Pass EUR amount explicitly
       );
     } catch (error) {
       logger.error('Failed to create/update P&L summary record', {
@@ -390,6 +383,8 @@ async function createPNLSummaryRecords(project, month, year, revenue, expenses, 
 
 /**
  * Create or update a single P&L record
+ * @param {number} sumaRON - Amount in RON
+ * @param {number} sumaEURO - Amount in EURO (optional, will be calculated if not provided)
  */
 async function createOrUpdatePNLRecord(
   cheltuialaName,
@@ -397,13 +392,17 @@ async function createOrUpdatePNLRecord(
   month,
   year,
   category,
-  suma,
+  sumaRON,
   description,
-  stats
+  stats,
+  sumaEURO = null
 ) {
   try {
     // Check if record exists - now search by cheltuiala name too since multiple records per category
     const existingRecord = await getPNLRecord(project, month, year, category, cheltuialaName);
+    
+    // Calculate EUR if not provided
+    const calculatedEURO = sumaEURO !== null ? sumaEURO : sumaRON / EUR_RON_RATE;
     
     const recordData = {
       [FIELDS.PNL_CHELTUIALA]: cheltuialaName,
@@ -411,7 +410,8 @@ async function createOrUpdatePNLRecord(
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
       [FIELDS.PNL_CATEGORY]: category,
-      [FIELDS.PNL_SUMA]: suma, // Currency field - no formatting
+      [FIELDS.PNL_SUMA_RON]: sumaRON, // Currency field in RON
+      [FIELDS.PNL_SUMA_EURO]: calculatedEURO, // Currency field in EUR
       [FIELDS.PNL_SOURCE]: SOURCE.AUTOMATIC,
       [FIELDS.PNL_DESCRIERE]: description
     };
@@ -422,8 +422,9 @@ async function createOrUpdatePNLRecord(
         recordId: existingRecord.id,
         cheltuiala: cheltuialaName,
         category,
-        oldSuma: existingRecord.suma,
-        newSuma: suma
+        oldSumaRON: existingRecord.sumaRON,
+        newSumaRON: sumaRON,
+        newSumaEURO: calculatedEURO
       });
       
       await retryWithBackoff(async () => {
@@ -437,7 +438,8 @@ async function createOrUpdatePNLRecord(
         project,
         cheltuiala: cheltuialaName,
         category,
-        suma
+        sumaRON,
+        sumaEURO: calculatedEURO
       });
       
       stats.updated++;
@@ -447,7 +449,8 @@ async function createOrUpdatePNLRecord(
         project,
         cheltuiala: cheltuialaName,
         category,
-        suma
+        sumaRON,
+        sumaEURO: calculatedEURO
       });
       
       await retryWithBackoff(async () => {
@@ -458,7 +461,8 @@ async function createOrUpdatePNLRecord(
         project,
         cheltuiala: cheltuialaName,
         category,
-        suma
+        sumaRON,
+        sumaEURO: calculatedEURO
       });
       
       stats.created++;

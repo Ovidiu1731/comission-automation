@@ -79,7 +79,8 @@ export const FIELDS = {
   
   // P&L's
   PNL_CHELTUIALA: 'Cheltuiala',
-  PNL_SUMA: 'Suma',
+  PNL_SUMA_RON: 'Suma RON',
+  PNL_SUMA_EURO: 'Suma EURO',
   PNL_DESCRIERE: 'Descriere',
   PNL_PROJECT: 'Proiect',
   PNL_MONTH: 'Luna',
@@ -129,12 +130,11 @@ export const PNL_CATEGORIES = {
 };
 
 // Fixed P&L summary record names (always present under P&L category)
+// Each record has both RON and EURO columns populated
 export const PNL_SUMMARY_RECORDS = {
   INCASARI: 'Incasari',
-  TOTAL_CHELTUIELI_RON: 'TOTAL CHELTUIELI RON',
-  TOTAL_CHELTUIELI_EURO: 'TOTAL CHELTUIELI EURO',
-  TOTAL_PROFIT_RON: 'TOTAL PROFIT RON',
-  TOTAL_PROFIT_EURO: 'TOTAL PROFIT EURO',
+  TOTAL_CHELTUIELI: 'TOTAL CHELTUIELI',
+  TOTAL_PROFIT: 'TOTAL PROFIT',
   MARJA_PROFIT: 'MARJĂ PROFIT'
 };
 
@@ -215,10 +215,8 @@ export const COPYWRITING = {
  * @returns {string} Current month name (e.g., "Octombrie")
  */
 export function getCurrentRomanianMonth() {
-  // Temporary: Process October to catch DariusGhereben
-  return 'Octombrie';
-  // const now = new Date();
-  // return ROMANIAN_MONTHS[now.getMonth()];
+  const now = new Date();
+  return ROMANIAN_MONTHS[now.getMonth()];
 }
 
 /**
@@ -226,8 +224,7 @@ export function getCurrentRomanianMonth() {
  * @returns {number} Current year (e.g., 2025)
  */
 export function getCurrentYear() {
-  return 2025;
-  // return new Date().getFullYear();
+  return new Date().getFullYear();
 }
 
 /**
