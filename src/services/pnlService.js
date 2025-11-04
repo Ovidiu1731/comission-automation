@@ -11,7 +11,7 @@ import {
   getCurrentYear
 } from '../config/constants.js';
 import { base } from '../config/airtable.js';
-import { retryWithBackoff } from './airtableService.js';
+import { retryWithBackoff, getAllMonthYearsFromSales } from './airtableService.js';
 
 // EUR/RON exchange rate (fixed per client requirement)
 const EUR_RON_RATE = 5.08;
@@ -20,14 +20,63 @@ const EUR_RON_RATE = 5.08;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Process P&L records for the current month
+ * Process P&L records for ALL months
  * Creates/updates P&L records showing revenue and expenses by project
  */
 export async function processPNL() {
-  const month = getCurrentRomanianMonth();
-  const year = getCurrentYear();
+  logger.info('=== Processing P&L Records for ALL months ===');
   
-  logger.info('=== Processing P&L Records ===', { month, year });
+  try {
+    const monthYears = await getAllMonthYearsFromSales();
+    
+    if (monthYears.length === 0) {
+      return {
+        processed: 0,
+        created: 0,
+        updated: 0,
+        errors: 0
+      };
+    }
+    
+    logger.info(`Processing P&L for ${monthYears.length} month-years: ${monthYears.join(', ')}`);
+    
+    let totalStats = {
+      processed: 0,
+      created: 0,
+      updated: 0,
+      errors: 0
+    };
+    
+    for (const monthYear of monthYears) {
+      logger.info(`\n========== Processing P&L for: ${monthYear} ==========`);
+      const result = await processPNLForMonthYear(monthYear);
+      totalStats.processed += result.processed;
+      totalStats.created += result.created;
+      totalStats.updated += result.updated;
+      totalStats.errors += result.errors;
+    }
+    
+    logger.info('Completed P&L processing for all months', totalStats);
+    return totalStats;
+  } catch (error) {
+    logger.error('P&L processing failed', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Process P&L records for a specific month-year
+ */
+async function processPNLForMonthYear(monthYear) {
+  // Parse month-year (format: "Luna YYYY")
+  const parts = monthYear.split(' ');
+  const month = parts[0];
+  const year = parseInt(parts[1]);
+  
+  logger.info('Processing P&L for month-year', { monthYear, month, year });
   
   const stats = {
     processed: 0,

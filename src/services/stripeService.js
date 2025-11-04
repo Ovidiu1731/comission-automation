@@ -10,7 +10,8 @@ import { base } from '../config/airtable.js';
 import {
   getExpenseByExpenseId,
   createExpense,
-  updateExpense
+  updateExpense,
+  getAllMonthYearsFromSales
 } from './airtableService.js';
 import {
   TABLES,
@@ -105,16 +106,71 @@ async function getStripePayments(monthYear) {
 }
 
 /**
- * Process all Stripe fee expenses for current month
+ * Process all Stripe fee expenses for ALL months
  */
 export async function processStripeFees() {
-  const month = getCurrentRomanianMonth();
-  const year = getCurrentYear();
-  const monthYear = getCurrentMonthYearString();
+  logger.info('=== Processing Stripe Fees for ALL months ===');
   
-  logger.info('=== Processing Stripe Fees ===');
-  logger.info('Month:', month);
-  logger.info('Year:', year);
+  try {
+    const monthYears = await getAllMonthYearsFromSales();
+    
+    if (monthYears.length === 0) {
+      return {
+        processed: 0,
+        skipped: 0,
+        created: 0,
+        updated: 0,
+        errors: 0,
+        totalFees: 0,
+        totalProcessed: 0
+      };
+    }
+    
+    logger.info(`Processing Stripe fees for ${monthYears.length} month-years: ${monthYears.join(', ')}`);
+    
+    let totalStats = {
+      processed: 0,
+      skipped: 0,
+      created: 0,
+      updated: 0,
+      errors: 0,
+      totalFees: 0,
+      totalProcessed: 0
+    };
+    
+    for (const monthYear of monthYears) {
+      logger.info(`\n========== Processing Stripe fees for: ${monthYear} ==========`);
+      const result = await processStripeFeesForMonthYear(monthYear);
+      totalStats.processed += result.processed;
+      totalStats.skipped += result.skipped;
+      totalStats.created += result.created;
+      totalStats.updated += result.updated;
+      totalStats.errors += result.errors;
+      totalStats.totalFees += result.totalFees;
+      totalStats.totalProcessed += result.totalProcessed;
+    }
+    
+    logger.info('Completed Stripe fee processing for all months', totalStats);
+    return totalStats;
+  } catch (error) {
+    logger.error('Failed to process Stripe fees', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Process Stripe fees for a specific month-year
+ */
+async function processStripeFeesForMonthYear(monthYear) {
+  // Parse month-year (format: "Luna YYYY")
+  const parts = monthYear.split(' ');
+  const month = parts[0];
+  const year = parseInt(parts[1]);
+  
+  logger.info('Processing Stripe fees for month-year', { monthYear, month, year });
   
   const stats = {
     processed: 0,
@@ -127,11 +183,11 @@ export async function processStripeFees() {
   };
   
   try {
-    // Get all Stripe payments for current month
+    // Get all Stripe payments for this month-year
     const payments = await getStripePayments(monthYear);
     
     if (payments.length === 0) {
-      logger.info('No Stripe payments found for current month', { month, year });
+      logger.info('No Stripe payments found for month-year', { monthYear });
       return stats;
     }
     

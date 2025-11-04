@@ -12,7 +12,8 @@ import {
   getRepresentativeByExactName,
   getMonthlyCommissionByRepAndMonth,
   createMonthlyCommission,
-  updateMonthlyCommission
+  updateMonthlyCommission,
+  getAllMonthYearsFromSales
 } from './airtableService.js';
 import {
   FIELDS,
@@ -130,14 +131,72 @@ function calculateProgressiveCommission(totalSalesRON) {
 }
 
 /**
- * Process copywriting commissions for current month
+ * Process copywriting commissions for ALL months
  */
 export async function processCopywritingCommissions() {
-  const month = getCurrentRomanianMonth();
-  const year = getCurrentYear();
-  const monthYear = `${month} ${year}`;
+  logger.info('=== Processing Copywriting Commissions for ALL months ===');
   
-  logger.info('=== Processing Copywriting Commissions ===', { 
+  try {
+    const monthYears = await getAllMonthYearsFromSales();
+    
+    if (monthYears.length === 0) {
+      return {
+        processed: 0,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        errors: 0,
+        totalCommission: 0,
+        totalSalesValue: 0
+      };
+    }
+    
+    logger.info(`Processing copywriting for ${monthYears.length} month-years: ${monthYears.join(', ')}`);
+    
+    let totalStats = {
+      processed: 0,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: 0,
+      totalCommission: 0,
+      totalSalesValue: 0
+    };
+    
+    for (const monthYear of monthYears) {
+      logger.info(`\n========== Processing copywriting for: ${monthYear} ==========`);
+      const result = await processCopywritingCommissionsForMonthYear(monthYear);
+      totalStats.processed += result.processed;
+      totalStats.created += result.created;
+      totalStats.updated += result.updated;
+      totalStats.skipped += result.skipped;
+      totalStats.errors += result.errors;
+      totalStats.totalCommission += result.totalCommission;
+      totalStats.totalSalesValue += result.totalSalesValue;
+    }
+    
+    logger.info('Completed copywriting processing for all months', totalStats);
+    return totalStats;
+  } catch (error) {
+    logger.error('Failed to process copywriting commissions', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Process copywriting commissions for a specific month-year
+ */
+async function processCopywritingCommissionsForMonthYear(monthYear) {
+  // Parse month-year (format: "Luna YYYY")
+  const parts = monthYear.split(' ');
+  const month = parts[0];
+  const year = parseInt(parts[1]);
+  
+  logger.info('Processing copywriting for month-year', { 
+    monthYear, 
     month, 
     year,
     copywriter: COPYWRITING.copywriter.name,
@@ -145,7 +204,7 @@ export async function processCopywritingCommissions() {
   });
   
   try {
-    // Get all sales for the current month
+    // Get all sales for this month-year
     const allSales = await getSalesByUtmCampaign(monthYear);
     
     if (allSales.length === 0) {
