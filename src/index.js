@@ -151,26 +151,29 @@ app.get('/health', (req, res) => {
 app.post('/refresh/all', async (req, res) => {
   logger.info('Manual full refresh triggered via webhook');
   
-  try {
-    const results = await processCommissions();
-    
-    res.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      results
+  // Respond immediately to prevent timeout
+  res.json({
+    success: true,
+    message: 'Full refresh started for ALL months. Processing in background...',
+    timestamp: new Date().toISOString(),
+    note: 'This will take 2-3 minutes. Check Cheltuieli and P&L tables to see updates.'
+  });
+  
+  // Process in background (don't await - let it run asynchronously)
+  processCommissions()
+    .then((results) => {
+      logger.info('Background full refresh completed successfully', {
+        results,
+        timestamp: new Date().toISOString()
+      });
+    })
+    .catch((error) => {
+      logger.error('Background full refresh failed', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
     });
-  } catch (error) {
-    logger.error('Manual full refresh failed', {
-      error: error.message,
-      stack: error.stack
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
 });
 
 // Webhook endpoint for Airtable automation when manual Cheltuieli record is created
