@@ -88,7 +88,7 @@ export async function getAllMonthsWithCommissions() {
         });
     });
     
-    const months = Array.from(monthsSet);
+    const months = Array.from(monthsSet).filter(month => month && month !== 'Invalid DateTime');
     logger.info('Found unique months', { months, count: months.length });
     return months;
   } catch (error) {
@@ -126,7 +126,7 @@ export async function getAllMonthYearsFromSales() {
         });
     });
     
-    const monthYears = Array.from(monthYearsSet);
+    const monthYears = Array.from(monthYearsSet).filter(my => my && !my.includes('Invalid DateTime'));
     logger.info('Found unique month-years', { monthYears, count: monthYears.length });
     return monthYears;
   } catch (error) {
