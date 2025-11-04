@@ -742,8 +742,7 @@ export async function getExpenseByExpenseId(expenseId) {
               amount: record.get(FIELDS.EXPENSE_AMOUNT),
               description: record.get(FIELDS.EXPENSE_DESCRIPTION),
               project: record.get(FIELDS.EXPENSE_PROJECT),
-              category: record.get(FIELDS.EXPENSE_CATEGORY),
-              type: record.get(FIELDS.EXPENSE_TYPE)
+              category: record.get(FIELDS.EXPENSE_CATEGORY)
             });
           });
           

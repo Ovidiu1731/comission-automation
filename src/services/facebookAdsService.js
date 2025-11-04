@@ -13,7 +13,7 @@ import {
 import { ensureValidToken } from './facebookTokenService.js';
 import {
   FIELDS,
-  EXPENSE_TYPES,
+  EXPENSE_CATEGORIES,
   VAT_INCLUDED,
   SOURCE,
   FACEBOOK,
@@ -289,9 +289,8 @@ async function createOrUpdateFacebookAdsExpense(group, month, year) {
   // Prepare expense data
   const expenseFields = {
     [FIELDS.EXPENSE_DESCRIPTION]: `Facebook Ads - ${project} (${campaignCount} campanii, ${formattedSpend} RON)`,
-    [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.OTHER, // "Altele" - can be customized
     [FIELDS.EXPENSE_PROJECT]: project,
-    [FIELDS.EXPENSE_CATEGORY]: FACEBOOK.category, // "Reclame Facebook"
+    [FIELDS.EXPENSE_CATEGORY]: EXPENSE_CATEGORIES.MARKETING,
     [FIELDS.EXPENSE_AMOUNT]: roundedSpend,
     [FIELDS.EXPENSE_VAT_INCLUDED]: VAT_INCLUDED.NO, // Facebook ads - VAT not included
     [FIELDS.EXPENSE_MONTH]: month,

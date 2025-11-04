@@ -16,7 +16,6 @@ import {
 import {
   FIELDS,
   EXPENSE_CATEGORIES,
-  EXPENSE_TYPES,
   VAT_INCLUDED,
   SOURCE,
   getCurrentRomanianMonth,
@@ -295,7 +294,6 @@ async function processSalesRepCommission(commission, month, year) {
     // Prepare expense data
     const expenseFields = {
       [FIELDS.EXPENSE_DESCRIPTION]: description,
-      [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
       [FIELDS.EXPENSE_PROJECT]: project,
       [FIELDS.EXPENSE_CATEGORY]: EXPENSE_CATEGORIES.REPRESENTATIVES,
       [FIELDS.EXPENSE_AMOUNT]: roundedCommission,

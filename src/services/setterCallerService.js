@@ -15,7 +15,6 @@ import {
 import {
   FIELDS,
   EXPENSE_CATEGORIES,
-  EXPENSE_TYPES,
   VAT_INCLUDED,
   SOURCE,
   getCurrentRomanianMonth,
@@ -171,7 +170,7 @@ async function processSetterCallerCommission(commission, month, year) {
   }
   
   // Determine category based on role
-  const category = role.includes('Caller') ? EXPENSE_CATEGORIES.CALLER : EXPENSE_CATEGORIES.SETTER;
+  const category = role.includes('Caller') ? EXPENSE_CATEGORIES.CALLERI : EXPENSE_CATEGORIES.SETTERI;
   
   // Create expense for each project allocation
   let created = 0;
@@ -222,7 +221,6 @@ async function processSetterCallerCommission(commission, month, year) {
     // Note: 'name' already includes the month (e.g., "AbagiuMario - Octombrie")
     const expenseFields = {
       [FIELDS.EXPENSE_DESCRIPTION]: name,
-      [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
       [FIELDS.EXPENSE_PROJECT]: project,
       [FIELDS.EXPENSE_CATEGORY]: category,
       [FIELDS.EXPENSE_AMOUNT]: roundedCommission,

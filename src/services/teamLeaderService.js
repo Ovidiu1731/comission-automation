@@ -21,7 +21,6 @@ import {
 } from './airtableService.js';
 import {
   FIELDS,
-  EXPENSE_TYPES,
   VAT_INCLUDED,
   SOURCE,
   TEAM_LEADERS,
@@ -381,7 +380,6 @@ async function createOrUpdateTeamLeaderExpense(group, month, year) {
   // Prepare expense data
   const expenseFields = {
     [FIELDS.EXPENSE_DESCRIPTION]: `Teamleader ${teamLeaderType}: ${teamLeaderName} (${salesCount} vanzari)`,
-    [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
     [FIELDS.EXPENSE_PROJECT]: project,
     [FIELDS.EXPENSE_CATEGORY]: category,
     [FIELDS.EXPENSE_AMOUNT]: roundedCommission,

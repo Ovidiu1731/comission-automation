@@ -64,7 +64,6 @@ export const FIELDS = {
   REP_MONTHLY_COMMISSIONS: 'Comisioane Lunare',
   
   // Cheltuieli
-  EXPENSE_TYPE: 'Tip Cheltuiala',
   EXPENSE_DESCRIPTION: 'Descriere',
   EXPENSE_PROJECT: 'Proiect',
   EXPENSE_CATEGORY: 'Categorie',
@@ -91,16 +90,12 @@ export const FIELDS = {
 
 // Category options for expenses (must match Airtable "Categorie" field options)
 export const EXPENSE_CATEGORIES = {
-  REPRESENTATIVES: 'Reprezentanți',
-  CALLER: 'Caller',
-  SETTER: 'Setter',
+  REPRESENTATIVES: 'Reprezentanti',
+  CALLERI: 'Calleri',
+  SETTERI: 'Setteri',
   TEAM_LEADER: 'Team Leader',
-  TEAM_LEADER_SETTER: 'Team Leader Setter',
-  TEAM_LEADER_CALLER: 'Team Leader Caller',
-  STRIPE: 'Stripe',
-  FACEBOOK_ADS: 'Reclame Facebook',
-  COPYWRITING: 'Copywriting',
-  UNKNOWN: 'Unknown'
+  TAXE_IMPOZITE: 'Taxe & Impozite',
+  MARKETING: 'Marketing'
 };
 
 // Valid CamelCase name regex for setter/caller validation
@@ -136,13 +131,6 @@ export const PNL_SUMMARY_RECORDS = {
   TOTAL_CHELTUIELI: 'TOTAL CHELTUIELI',
   TOTAL_PROFIT: 'TOTAL PROFIT',
   MARJA_PROFIT: 'MARJĂ PROFIT'
-};
-
-// Expense type options
-export const EXPENSE_TYPES = {
-  COMMISSIONS: 'Comisioane',
-  BANKING_FEES: 'Taxe și comisioane bancare',
-  OTHER: 'Altele'
 };
 
 // Setter/Caller commission percentage (5%)
@@ -200,7 +188,7 @@ export const COPYWRITING = {
     name: 'Diana Nastase',
     utmIdentifier: 'diananastase', // For matching (normalized)
   },
-  category: 'Copywriting',
+  category: 'Marketing', // Changed from 'Copywriting' to match new Airtable categories
   // Progressive tier structure (based on EUR thresholds)
   tiers: [
     { max: 10000, rate: 0.05 },     // 5% up to €10,000

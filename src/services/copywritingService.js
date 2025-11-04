@@ -17,7 +17,6 @@ import {
 import {
   FIELDS,
   EXPENSE_CATEGORIES,
-  EXPENSE_TYPES,
   VAT_INCLUDED,
   SOURCE,
   COPYWRITING,
@@ -491,7 +490,6 @@ async function createOrUpdateCopywritingExpense(data, totalSalesValueRON, totalC
   
   const expenseFields = {
     [FIELDS.EXPENSE_DESCRIPTION]: `Copywriter: Diana Nastase`,
-    [FIELDS.EXPENSE_TYPE]: EXPENSE_TYPES.COMMISSIONS,
     [FIELDS.EXPENSE_PROJECT]: project,
     [FIELDS.EXPENSE_CATEGORY]: COPYWRITING.category,
     [FIELDS.EXPENSE_AMOUNT]: projectCommission,
