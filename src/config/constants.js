@@ -33,7 +33,7 @@ export const FIELDS = {
   NAME: 'Nume',
   REPRESENTATIVE: 'Reprezentant',
   MONTH: 'Lună',
-  FINAL_COMMISSION: 'Comision final',
+  FINAL_COMMISSION: 'Sumă Comision',
   SALES: 'Vânzări',
   ROLE: 'Rol',
   TOTAL_MONTHLY_SALES: 'Total Vânzări Lunare',
