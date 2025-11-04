@@ -351,9 +351,9 @@ async function createPNLSummaryRecords(project, month, year, revenue, expenses, 
     },
     {
       name: PNL_SUMMARY_RECORDS.MARJA_PROFIT,
-      sumaRON: marginPercent, // Store as number for margin
-      sumaEURO: marginPercent, // Same value in both columns for percentage
-      description: `Marjă profit pentru ${project}`
+      sumaRON: null, // No amount for margin - percentage in description only
+      sumaEURO: null, // No amount for margin - percentage in description only
+      description: `Marjă profit ${marginPercent.toFixed(2)}% pentru ${project}`
     }
   ];
   
@@ -401,8 +401,8 @@ async function createOrUpdatePNLRecord(
     // Check if record exists - now search by cheltuiala name too since multiple records per category
     const existingRecord = await getPNLRecord(project, month, year, category, cheltuialaName);
     
-    // Calculate EUR if not provided
-    const calculatedEURO = sumaEURO !== null ? sumaEURO : sumaRON / EUR_RON_RATE;
+    // Calculate EUR if not provided (and if sumaRON is not null)
+    const calculatedEURO = sumaEURO !== null ? sumaEURO : (sumaRON !== null ? sumaRON / EUR_RON_RATE : null);
     
     const recordData = {
       [FIELDS.PNL_CHELTUIALA]: cheltuialaName,
@@ -410,11 +410,17 @@ async function createOrUpdatePNLRecord(
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
       [FIELDS.PNL_CATEGORY]: category,
-      [FIELDS.PNL_SUMA_RON]: sumaRON, // Currency field in RON
-      [FIELDS.PNL_SUMA_EURO]: calculatedEURO, // Currency field in EUR
       [FIELDS.PNL_SOURCE]: SOURCE.AUTOMATIC,
       [FIELDS.PNL_DESCRIERE]: description
     };
+    
+    // Only add Suma fields if they are not null (for MARJĂ PROFIT we skip these)
+    if (sumaRON !== null) {
+      recordData[FIELDS.PNL_SUMA_RON] = sumaRON;
+    }
+    if (calculatedEURO !== null) {
+      recordData[FIELDS.PNL_SUMA_EURO] = calculatedEURO;
+    }
     
     if (existingRecord) {
       // Update existing record

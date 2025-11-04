@@ -132,7 +132,7 @@ export const PNL_CATEGORIES = {
 // Fixed P&L summary record names (always present under P&L category)
 // Each record has both RON and EURO columns populated
 export const PNL_SUMMARY_RECORDS = {
-  INCASARI: 'Incasari',
+  INCASARI: 'INCASARI',
   TOTAL_CHELTUIELI: 'TOTAL CHELTUIELI',
   TOTAL_PROFIT: 'TOTAL PROFIT',
   MARJA_PROFIT: 'MARJĂ PROFIT'
