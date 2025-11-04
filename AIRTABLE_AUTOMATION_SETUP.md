@@ -124,11 +124,11 @@ P&L Table Updated Instantly
 
 ## 🚀 Alternative: Manual Trigger
 
-If you prefer to manually trigger P&L updates instead of using an automation, you can:
+If you prefer to manually trigger a full refresh (Cheltuieli + P&L) instead of using an automation, you can:
 
-1. Use this URL: `https://[your-railway-domain]/refresh/pnl`
+1. Use this URL: `https://[your-railway-domain]/refresh/all`
 2. Method: `POST`
-3. Call it whenever you want to refresh the P&L table
+3. Call it whenever you want to refresh everything (processes commissions and updates P&L)
 
 You can even create a button in Airtable that calls this URL!
 

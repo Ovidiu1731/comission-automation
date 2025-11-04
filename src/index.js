@@ -147,33 +147,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Manual P&L refresh endpoint
-app.post('/refresh/pnl', async (req, res) => {
-  logger.info('Manual P&L refresh triggered via webhook');
-  
-  try {
-    const pnlResults = await processPNL();
-    
-    res.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      results: pnlResults
-    });
-  } catch (error) {
-    logger.error('Manual P&L refresh failed', {
-      error: error.message,
-      stack: error.stack
-    });
-    
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Manual full commission processing endpoint
+// Manual full commission processing endpoint (refreshes Cheltuieli + P&L)
 app.post('/refresh/all', async (req, res) => {
   logger.info('Manual full refresh triggered via webhook');
   
@@ -267,8 +241,7 @@ function start() {
     logger.info(`Webhook server listening on port ${PORT}`);
     logger.info('Available endpoints:', {
       health: `GET /health`,
-      refreshPnl: `POST /refresh/pnl`,
-      refreshAll: `POST /refresh/all`,
+      refreshAll: `POST /refresh/all (refreshes Cheltuieli + P&L)`,
       cheltuieliCreated: `POST /webhook/cheltuieli-created`
     });
   });
