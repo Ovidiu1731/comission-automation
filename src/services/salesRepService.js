@@ -6,6 +6,7 @@
  */
 import {
   getMonthlyCommissions,
+  getAllMonthsWithCommissions,
   getSalesByIds,
   expenseExists,
   getExpenseByExpenseId,
@@ -25,16 +26,80 @@ import { isSalesRole, isValidExpenseAmount, isValidProject } from '../utils/vali
 import { logger } from '../utils/logger.js';
 
 /**
- * Process all Sales Rep commissions for current month
+ * Process all Sales Rep commissions for ALL months
  */
 export async function processSalesRepCommissions() {
-  const month = getCurrentRomanianMonth();
-  const year = getCurrentYear();
-  
-  logger.info('Starting Sales Rep commission processing', { month, year });
+  logger.info('Starting Sales Rep commission processing for ALL months');
   
   try {
-    // Get all monthly commissions for current month
+    // Get all unique months with commissions
+    const months = await getAllMonthsWithCommissions();
+    
+    if (months.length === 0) {
+      logger.info('No months with commissions found');
+      return {
+        processed: 0,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        errors: 0
+      };
+    }
+    
+    logger.info(`Processing ${months.length} months: ${months.join(', ')}`);
+    
+    let totalCreated = 0;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+    let totalErrors = 0;
+    let totalProcessed = 0;
+    
+    // Process each month
+    for (const month of months) {
+      logger.info(`\n========== Processing month: ${month} ==========`);
+      const result = await processSalesRepCommissionsForMonth(month);
+      totalCreated += result.created;
+      totalUpdated += result.updated;
+      totalSkipped += result.skipped;
+      totalErrors += result.errors;
+      totalProcessed += result.processed;
+    }
+    
+    logger.info('Completed Sales Rep commission processing for all months', {
+      monthsProcessed: months.length,
+      totalProcessed,
+      totalCreated,
+      totalUpdated,
+      totalSkipped,
+      totalErrors
+    });
+    
+    return {
+      processed: totalProcessed,
+      created: totalCreated,
+      updated: totalUpdated,
+      skipped: totalSkipped,
+      errors: totalErrors
+    };
+  } catch (error) {
+    logger.error('Failed to process Sales Rep commissions', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Process Sales Rep commissions for a specific month
+ */
+async function processSalesRepCommissionsForMonth(month) {
+  const year = getCurrentYear(); // We assume all months are for current year
+  
+  logger.info('Processing Sales Rep commissions for month', { month, year });
+  
+  try {
+    // Get all monthly commissions for this month
     const commissions = await getMonthlyCommissions(month);
     
     if (commissions.length === 0) {

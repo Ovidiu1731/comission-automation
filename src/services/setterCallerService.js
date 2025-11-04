@@ -6,6 +6,7 @@
  */
 import {
   getMonthlySetterCallerCommissions,
+  getAllMonthsWithCommissions,
   getSalesByIds,
   expenseExists,
   getExpenseByExpenseId,
@@ -27,13 +28,77 @@ import {
 import { logger } from '../utils/logger.js';
 
 /**
- * Process all Setter/Caller commissions for current month
+ * Process all Setter/Caller commissions for ALL months
  */
 export async function processSetterCallerCommissions() {
-  const month = getCurrentRomanianMonth();
+  logger.info('Starting Setter/Caller commission processing for ALL months');
+  
+  try {
+    // Get all unique months
+    const months = await getAllMonthsWithCommissions();
+    
+    if (months.length === 0) {
+      logger.info('No months with commissions found');
+      return {
+        processed: 0,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        errors: 0
+      };
+    }
+    
+    logger.info(`Processing ${months.length} months: ${months.join(', ')}`);
+    
+    let totalCreated = 0;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+    let totalErrors = 0;
+    let totalProcessed = 0;
+    
+    // Process each month
+    for (const month of months) {
+      logger.info(`\n========== Processing Setter/Caller for month: ${month} ==========`);
+      const result = await processSetterCallerCommissionsForMonth(month);
+      totalCreated += result.created;
+      totalUpdated += result.updated;
+      totalSkipped += result.skipped;
+      totalErrors += result.errors;
+      totalProcessed += result.processed;
+    }
+    
+    logger.info('Completed Setter/Caller commission processing for all months', {
+      monthsProcessed: months.length,
+      totalProcessed,
+      totalCreated,
+      totalUpdated,
+      totalSkipped,
+      totalErrors
+    });
+    
+    return {
+      processed: totalProcessed,
+      created: totalCreated,
+      updated: totalUpdated,
+      skipped: totalSkipped,
+      errors: totalErrors
+    };
+  } catch (error) {
+    logger.error('Failed to process Setter/Caller commissions', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
+ * Process Setter/Caller commissions for a specific month
+ */
+async function processSetterCallerCommissionsForMonth(month) {
   const year = getCurrentYear();
   
-  logger.info('Starting Setter/Caller commission processing', { month, year });
+  logger.info('Processing Setter/Caller commissions for month', { month, year });
   
   try {
     // Get all monthly commissions for Setters/Callers

@@ -63,6 +63,44 @@ export async function retryWithBackoff(fn, maxAttempts = 3) {
 }
 
 /**
+ * Get all unique months from monthly commissions table
+ */
+export async function getAllMonthsWithCommissions() {
+  logger.info('Fetching all unique months with commissions');
+  
+  try {
+    const monthsSet = new Set();
+    
+    await retryWithBackoff(async () => {
+      await base(TABLES.MONTHLY_COMMISSIONS)
+        .select({
+          fields: [FIELDS.MONTH],
+          maxRecords: 10000
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            const month = record.get(FIELDS.MONTH);
+            if (month) {
+              monthsSet.add(month);
+            }
+          });
+          fetchNextPage();
+        });
+    });
+    
+    const months = Array.from(monthsSet);
+    logger.info('Found unique months', { months, count: months.length });
+    return months;
+  } catch (error) {
+    logger.error('Failed to fetch unique months', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
+/**
  * Get all monthly commission records for current month
  * Filtered by role = "Sales" only
  */
