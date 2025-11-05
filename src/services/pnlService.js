@@ -154,6 +154,7 @@ async function processPNLForMonthYear(monthYear) {
 
 /**
  * Get all verified sales grouped by project for a given month
+ * Only includes sales with "Verificat Manual" or "Verificat Automat din Stripe" status
  */
 async function getSalesByProject(month, year) {
   logger.debug('Fetching sales by project', { month, year });
@@ -165,7 +166,13 @@ async function getSalesByProject(month, year) {
     await retryWithBackoff(async () => {
       await base(TABLES.SALES)
         .select({
-          filterByFormula: `{${FIELDS.SALE_MONTH}} = "${monthYear}"`,
+          filterByFormula: `AND(
+            {${FIELDS.SALE_MONTH}} = "${monthYear}",
+            OR(
+              {${FIELDS.VERIFICAT}} = "Verificat Manual",
+              {${FIELDS.VERIFICAT}} = "Verificat Automat din Stripe"
+            )
+          )`,
           fields: [FIELDS.PROJECT, FIELDS.TOTAL_AMOUNT]
         })
         .eachPage((records, fetchNextPage) => {

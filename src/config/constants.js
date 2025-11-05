@@ -54,6 +54,7 @@ export const FIELDS = {
   UTM_CAMPAIGN: 'Utm Campaign',
   PAYMENT_METHOD: 'Modalitate de plata',
   MONTHLY_COMMISSIONS: 'Comisioane Lunare',
+  VERIFICAT: 'Verificat',
   
   // Reprezentanți
   REP_NAME: 'Nume',
