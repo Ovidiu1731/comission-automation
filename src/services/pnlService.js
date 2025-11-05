@@ -319,21 +319,22 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
         // Extract name from description (e.g., "Comision Mario Cazacu" -> "Mario Cazacu")
         let cheltuialaName = expense.description;
         
-        // For Facebook Ads, simplify to just "Facebook Ads"
-        if (expense.description.includes('Facebook Ads')) {
-          cheltuialaName = 'Facebook Ads';
-        }
-        // For Stripe, simplify to just "Stripe"
-        else if (expense.description.includes('Stripe') || expense.description.includes('stripe')) {
+        // For Stripe, check category first (most reliable), then description
+        if (expense.expenseCategory === EXPENSE_CATEGORIES.TAXE_IMPOZITE && 
+            (expense.description.includes('Stripe') || expense.description.includes('stripe') || expense.description.includes('procesare plati'))) {
           cheltuialaName = 'Stripe';
+        }
+        // For Facebook Ads, simplify to just "Facebook Ads"
+        else if (expense.description.includes('Facebook Ads')) {
+          cheltuialaName = 'Facebook Ads';
         }
         // For commission expenses, clean up the description
         else if (expense.description.includes('Comision')) {
           cheltuialaName = expense.description.replace(/^Comision\s+/, '');
         }
         // For Copywriting, use the category name
-        else if (expense.expenseCategory === 'Copywriting') {
-          cheltuialaName = expense.expenseCategory;
+        else if (expense.expenseCategory === 'Salarii' && expense.description.includes('Copywriter')) {
+          cheltuialaName = 'Diana Nastase';
         }
         
         await createOrUpdatePNLRecord(
