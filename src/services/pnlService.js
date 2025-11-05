@@ -205,6 +205,7 @@ async function getSalesByProject(month, year) {
 
 /**
  * Get all individual expenses for a given month (not aggregated)
+ * Includes both automatic and manual expenses
  */
 async function getExpensesByProject(month, year) {
   logger.debug('Fetching individual expenses by project', { month, year });
@@ -217,8 +218,7 @@ async function getExpensesByProject(month, year) {
         .select({
           filterByFormula: `AND(
             {${FIELDS.EXPENSE_MONTH}} = "${month}",
-            {${FIELDS.EXPENSE_YEAR}} = ${year},
-            {${FIELDS.EXPENSE_SOURCE}} = "${SOURCE.AUTOMATIC}"
+            {${FIELDS.EXPENSE_YEAR}} = ${year}
           )`,
           fields: [
             FIELDS.EXPENSE_PROJECT,
