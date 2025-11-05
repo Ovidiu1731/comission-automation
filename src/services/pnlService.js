@@ -217,7 +217,8 @@ async function getExpensesByProject(month, year) {
             FIELDS.EXPENSE_PROJECT,
             FIELDS.EXPENSE_CATEGORY,
             FIELDS.EXPENSE_AMOUNT,
-            FIELDS.EXPENSE_DESCRIPTION
+            FIELDS.EXPENSE_DESCRIPTION,
+            FIELDS.EXPENSE_NAME
           ]
         })
         .eachPage((records, fetchNextPage) => {
@@ -226,6 +227,7 @@ async function getExpensesByProject(month, year) {
             const category = record.get(FIELDS.EXPENSE_CATEGORY);
             const amount = record.get(FIELDS.EXPENSE_AMOUNT) || 0;
             const description = record.get(FIELDS.EXPENSE_DESCRIPTION) || '';
+            const expenseName = record.get(FIELDS.EXPENSE_NAME) || '';
             
             if (project && category) {
               if (!expensesByProject[project]) {
@@ -241,7 +243,8 @@ async function getExpensesByProject(month, year) {
                   category: pnlCategory,
                   expenseCategory: category,
                   amount,
-                  description
+                  description,
+                  expenseName
                 });
               }
             }
@@ -328,9 +331,9 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
         else if (expense.description.includes('Facebook Ads')) {
           cheltuialaName = 'Facebook Ads';
         }
-        // For Team Leaders, use the description as-is (already formatted: "TM Setters: George Coapsi")
-        else if (expense.expenseCategory === EXPENSE_CATEGORIES.TEAM_LEADER && expense.description.startsWith('TM ')) {
-          cheltuialaName = expense.description;
+        // For Team Leaders, use the expense name (Cheltuiala field) which has "TM Callers/Setters: Name"
+        else if (expense.expenseCategory === EXPENSE_CATEGORIES.TEAM_LEADER) {
+          cheltuialaName = expense.expenseName || expense.description;
         }
         // For commission expenses, clean up the description
         else if (expense.description.includes('Comision')) {
