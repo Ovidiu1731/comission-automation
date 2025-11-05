@@ -123,7 +123,7 @@ export const PNL_CATEGORIES = {
   REPREZENTANTI: 'Reprezentanti',
   CALLERI: 'Calleri',
   SETTERI: 'Setteri',
-  TEAM_LEADERS: 'TeamLeaders',
+  TEAM_LEADERS: 'Team Leader',
   TAXE_IMPOZITE: 'Taxe & Impozite',
   SALARII: 'Salarii'
 };
