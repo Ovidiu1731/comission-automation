@@ -328,12 +328,16 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
         else if (expense.description.includes('Facebook Ads')) {
           cheltuialaName = 'Facebook Ads';
         }
+        // For Team Leaders, use the description as-is (already formatted: "TM Setters: George Coapsi")
+        else if (expense.expenseCategory === EXPENSE_CATEGORIES.TEAM_LEADER && expense.description.startsWith('TM ')) {
+          cheltuialaName = expense.description;
+        }
         // For commission expenses, clean up the description
         else if (expense.description.includes('Comision')) {
           cheltuialaName = expense.description.replace(/^Comision\s+/, '');
         }
-        // For Copywriting, use the category name
-        else if (expense.expenseCategory === 'Salarii' && expense.description.includes('Copywriter')) {
+        // For Copywriting, use the description as-is (already formatted: "TM Setters: George Coapsi")
+        else if (expense.expenseCategory === EXPENSE_CATEGORIES.SALARII && expense.description.includes('Copywriter')) {
           cheltuialaName = 'Diana Nastase';
         }
         
