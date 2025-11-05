@@ -95,7 +95,8 @@ export const EXPENSE_CATEGORIES = {
   SETTERI: 'Setteri',
   TEAM_LEADER: 'Team Leader',
   TAXE_IMPOZITE: 'Taxe & Impozite',
-  MARKETING: 'Marketing'
+  MARKETING: 'Marketing',
+  SALARII: 'Salarii'
 };
 
 // Valid CamelCase name regex for setter/caller validation
@@ -121,7 +122,8 @@ export const PNL_CATEGORIES = {
   CALLERI: 'Calleri',
   SETTERI: 'Setteri',
   TEAM_LEADERS: 'TeamLeaders',
-  TAXE_IMPOZITE: 'Taxe & Impozite'
+  TAXE_IMPOZITE: 'Taxe & Impozite',
+  SALARII: 'Salarii'
 };
 
 // Fixed P&L summary record names (always present under P&L category)
@@ -192,7 +194,7 @@ export const COPYWRITING = {
     name: 'Diana Nastase',
     utmIdentifier: 'diananastase', // For matching (normalized)
   },
-  category: 'Marketing', // Changed from 'Copywriting' to match new Airtable categories
+  category: 'Salarii', // Copywriting expenses go under Salarii category
   // Progressive tier structure (based on EUR thresholds)
   tiers: [
     { max: 10000, rate: 0.05 },     // 5% up to €10,000
