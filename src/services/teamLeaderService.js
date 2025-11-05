@@ -447,7 +447,7 @@ async function createOrUpdateTeamLeaderExpense(group, month, year) {
   // Prepare expense data
   const expenseFields = {
     [FIELDS.EXPENSE_NAME]: `TM ${teamLeaderType}s: ${teamLeaderName}`,
-    [FIELDS.EXPENSE_DESCRIPTION]: `TM ${teamLeaderType}s: ${teamLeaderName}`,
+    [FIELDS.EXPENSE_DESCRIPTION]: `${salesCount} vanzari`,
     [FIELDS.EXPENSE_PROJECT]: project,
     [FIELDS.EXPENSE_CATEGORY]: category,
     [FIELDS.EXPENSE_AMOUNT]: roundedCommission,
