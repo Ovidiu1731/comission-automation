@@ -205,7 +205,7 @@ async function getSalesByProject(month, year) {
 
 /**
  * Get all individual expenses for a given month (not aggregated)
- * Includes both automatic and manual expenses
+ * Only includes automatic expenses (manual expenses are handled by Airtable automation)
  */
 async function getExpensesByProject(month, year) {
   logger.debug('Fetching individual expenses by project', { month, year });
@@ -218,7 +218,8 @@ async function getExpensesByProject(month, year) {
         .select({
           filterByFormula: `AND(
             {${FIELDS.EXPENSE_MONTH}} = "${month}",
-            {${FIELDS.EXPENSE_YEAR}} = ${year}
+            {${FIELDS.EXPENSE_YEAR}} = ${year},
+            {${FIELDS.EXPENSE_SOURCE}} = "${SOURCE.AUTOMATIC}"
           )`,
           fields: [
             FIELDS.EXPENSE_PROJECT,
