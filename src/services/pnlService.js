@@ -270,16 +270,9 @@ function mapExpenseCategoryToPNL(expenseCategory) {
     [EXPENSE_CATEGORIES.REPRESENTATIVES]: PNL_CATEGORIES.REPREZENTANTI,
     [EXPENSE_CATEGORIES.CALLERI]: PNL_CATEGORIES.CALLERI, // Fixed: was using non-existent EXPENSE_CATEGORIES.CALLER
     [EXPENSE_CATEGORIES.SETTERI]: PNL_CATEGORIES.SETTERI, // Fixed: was using non-existent EXPENSE_CATEGORIES.SETTER
-    [EXPENSE_CATEGORIES.TEAM_LEADER]: null, // Will be handled separately based on description
+    [EXPENSE_CATEGORIES.TEAM_LEADER]: PNL_CATEGORIES.TEAM_LEADERS, // Team Leader commissions
     [EXPENSE_CATEGORIES.TAXE_IMPOZITE]: PNL_CATEGORIES.TAXE_IMPOZITE // Stripe fees
   };
-  
-  // Special handling for Team Leaders
-  if (expenseCategory === EXPENSE_CATEGORIES.TEAM_LEADER) {
-    // Team Leaders are already split by Caller/Setter in expenses, so we skip them here
-    // They'll be picked up by the Caller/Setter categories
-    return null;
-  }
   
   return mapping[expenseCategory] || null;
 }
