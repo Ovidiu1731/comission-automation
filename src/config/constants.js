@@ -64,6 +64,7 @@ export const FIELDS = {
   REP_MONTHLY_COMMISSIONS: 'Comisioane Lunare',
   
   // Cheltuieli
+  EXPENSE_NAME: 'Cheltuiala',
   EXPENSE_DESCRIPTION: 'Descriere',
   EXPENSE_PROJECT: 'Proiect',
   EXPENSE_CATEGORY: 'Categorie',
