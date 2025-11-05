@@ -365,7 +365,40 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
     }
   }
   
-  // 3. Create/Update the 5 summary records under P&L category
+  // 3. Create/Update TVA (VAT) expense record under Taxe & Impozite
+  // Calculate TVA from revenue (which includes VAT): TVA = Preț cu TVA - (Preț cu TVA / 1.21)
+  if (revenue > 0) {
+    try {
+      const tvaAmount = revenue - (revenue / 1.21);
+      
+      logger.info('Creating/updating TVA expense in P&L', {
+        project,
+        revenue,
+        tvaAmount: tvaAmount.toFixed(2)
+      });
+      
+      await createOrUpdatePNLRecord(
+        'TVA', // Cheltuiala name
+        project,
+        month,
+        year,
+        PNL_CATEGORIES.TAXE_IMPOZITE, // Category: Taxe & Impozite
+        tvaAmount,
+        `TVA calculat din incasari (${revenue.toFixed(2)} RON)`,
+        stats
+      );
+      
+      await delay(200);
+    } catch (error) {
+      logger.error('Failed to create/update TVA P&L record', {
+        project,
+        error: error.message
+      });
+      stats.errors++;
+    }
+  }
+  
+  // 4. Create/Update the summary records under P&L category
   await createPNLSummaryRecords(project, month, year, revenue, expenses, stats);
 }
 
@@ -377,8 +410,11 @@ async function createOrUpdatePNLRecords(project, month, year, revenue, salesCoun
 async function createPNLSummaryRecords(project, month, year, revenue, expenses, stats) {
   logger.debug('Creating P&L summary records', { project, month, year });
   
-  // Calculate total expenses (sum of all expense amounts)
-  const totalExpensesRON = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  // Calculate TVA from revenue
+  const tvaAmount = revenue > 0 ? revenue - (revenue / 1.21) : 0;
+  
+  // Calculate total expenses (sum of all expense amounts + TVA)
+  const totalExpensesRON = expenses.reduce((sum, expense) => sum + expense.amount, 0) + tvaAmount;
   const totalExpensesEUR = totalExpensesRON / EUR_RON_RATE;
   
   // Calculate profit
