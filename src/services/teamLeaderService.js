@@ -26,7 +26,8 @@ import {
   SOURCE,
   TEAM_LEADERS,
   getCurrentRomanianMonth,
-  getCurrentYear
+  getCurrentYear,
+  isMonthYearAfterOrEqual
 } from '../config/constants.js';
 import {
   isValidExpenseAmount,
@@ -159,6 +160,13 @@ async function processTeamLeaderCommissionsForMonth(month) {
         logger.debug(`${name} is a Caller → Team Leader: ${teamLeaderConfig.name}`);
       } else {
         logger.debug(`${name} role is ${roles.join(', ')} - not Setter or Caller, skipping`);
+        stats.skipped++;
+        continue;
+      }
+      
+      // Check if this month is before the Team Leader's start date
+      if (!isMonthYearAfterOrEqual(month, year, teamLeaderConfig.startMonth, teamLeaderConfig.startYear)) {
+        logger.info(`Skipping ${teamLeaderConfig.name} for ${month} ${year} - started in ${teamLeaderConfig.startMonth} ${teamLeaderConfig.startYear}`);
         stats.skipped++;
         continue;
       }

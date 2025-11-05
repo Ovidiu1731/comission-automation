@@ -141,12 +141,16 @@ export const TEAM_LEADERS = {
   SETTER: {
     name: 'George Coapsi',
     commissionRate: 0.05, // 5%
-    category: 'Team Leader' // Using existing category; user can manually change to 'Team Leader Setter' if option exists
+    category: 'Team Leader', // Using existing category; user can manually change to 'Team Leader Setter' if option exists
+    startMonth: 'Ianuarie', // Started in January (process all months)
+    startYear: 2024
   },
   CALLER: {
     name: 'Alexandru Prisiceanu',
     commissionRate: 0.02, // 2%
-    category: 'Team Leader' // Using existing category; user can manually change to 'Team Leader Caller' if option exists
+    category: 'Team Leader', // Using existing category; user can manually change to 'Team Leader Caller' if option exists
+    startMonth: 'Noiembrie', // Started in November
+    startYear: 2024
   }
 };
 
@@ -223,5 +227,28 @@ export function getCurrentMonthYearString() {
   const month = getCurrentRomanianMonth();
   const year = getCurrentYear();
   return `${month} ${year}`;
+}
+
+/**
+ * Get month index from Romanian month name
+ * @param {string} monthName - Romanian month name
+ * @returns {number} Month index (0-11)
+ */
+export function getMonthIndex(monthName) {
+  return ROMANIAN_MONTHS.indexOf(monthName);
+}
+
+/**
+ * Compare if monthYear1 is >= monthYear2
+ * @param {string} month1 - Romanian month name
+ * @param {number} year1 - Year
+ * @param {string} month2 - Romanian month name
+ * @param {number} year2 - Year
+ * @returns {boolean} True if monthYear1 >= monthYear2
+ */
+export function isMonthYearAfterOrEqual(month1, year1, month2, year2) {
+  if (year1 > year2) return true;
+  if (year1 < year2) return false;
+  return getMonthIndex(month1) >= getMonthIndex(month2);
 }
 
