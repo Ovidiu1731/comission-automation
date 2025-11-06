@@ -509,8 +509,9 @@ async function createOrUpdatePNLRecord(
       : cheltuialaName;
     
     // Check if record exists - now search by cheltuiala name too since multiple records per category
-    // For Team Leaders, search uses normalized name to find duplicates
-    const existingRecord = await getPNLRecord(project, month, year, category, displayName);
+    // For Team Leaders, pass the ORIGINAL name so getPNLRecord can search for both original and normalized versions
+    // This ensures we find existing records regardless of which format they were stored in
+    const existingRecord = await getPNLRecord(project, month, year, category, cheltuialaName);
     
     // Calculate EUR if not provided (and if sumaRON is not null)
     const calculatedEURO = sumaEURO !== null ? sumaEURO : (sumaRON !== null ? sumaRON / EUR_RON_RATE : null);
@@ -622,18 +623,28 @@ function normalizeTeamLeaderName(cheltuialaName, category) {
 
 /**
  * Get P&L record by project, month, year, category, and cheltuiala name
- * For Team Leader records, also searches using normalized name to find duplicates
+ * For Team Leader records, searches using both original and normalized name to find duplicates
+ * This handles cases where records might exist with either format (e.g., "TM Callers: Name" or "Name")
  */
 async function getPNLRecord(project, month, year, category, cheltuialaName) {
   try {
     const results = [];
     
     // For Team Leader records, try both exact match and normalized match
+    // This ensures we find records regardless of whether they were stored with the original or normalized format
     const searchNames = [cheltuialaName];
     if (category === PNL_CATEGORIES.TEAM_LEADERS) {
       const normalizedName = normalizeTeamLeaderName(cheltuialaName, category);
       if (normalizedName !== cheltuialaName) {
+        // Add normalized name to search list
         searchNames.push(normalizedName);
+      }
+      // Also try to find records that might have been stored with the "TM Callers:" prefix
+      // by checking if the current name is already normalized, and if so, try common prefixes
+      if (normalizedName === cheltuialaName) {
+        // Current name is already normalized, so also search for prefixed versions
+        searchNames.push(`TM Callers: ${cheltuialaName}`);
+        searchNames.push(`TM Setters: ${cheltuialaName}`);
       }
     }
     
@@ -660,7 +671,8 @@ async function getPNLRecord(project, month, year, category, cheltuialaName) {
                 id: record.id,
                 cheltuiala: record.get(FIELDS.PNL_CHELTUIALA),
                 category: record.get(FIELDS.PNL_CATEGORY),
-                suma: record.get(FIELDS.PNL_SUMA)
+                sumaRON: record.get(FIELDS.PNL_SUMA_RON),
+                sumaEURO: record.get(FIELDS.PNL_SUMA_EURO)
               });
             });
             fetchNextPage();
