@@ -501,14 +501,22 @@ async function createOrUpdatePNLRecord(
   sumaEURO = null
 ) {
   try {
+    // For Team Leader records, normalize the name to prevent duplicates
+    // But keep original name for display
+    const normalizedName = normalizeTeamLeaderName(cheltuialaName, category);
+    const displayName = (category === PNL_CATEGORIES.TEAM_LEADERS && normalizedName !== cheltuialaName) 
+      ? normalizedName 
+      : cheltuialaName;
+    
     // Check if record exists - now search by cheltuiala name too since multiple records per category
-    const existingRecord = await getPNLRecord(project, month, year, category, cheltuialaName);
+    // For Team Leaders, search uses normalized name to find duplicates
+    const existingRecord = await getPNLRecord(project, month, year, category, displayName);
     
     // Calculate EUR if not provided (and if sumaRON is not null)
     const calculatedEURO = sumaEURO !== null ? sumaEURO : (sumaRON !== null ? sumaRON / EUR_RON_RATE : null);
     
     const recordData = {
-      [FIELDS.PNL_CHELTUIALA]: cheltuialaName,
+      [FIELDS.PNL_CHELTUIALA]: displayName, // Use normalized name for Team Leaders to prevent duplicates
       [FIELDS.PNL_PROJECT]: project,
       [FIELDS.PNL_MONTH]: month,
       [FIELDS.PNL_YEAR]: year,
@@ -545,7 +553,7 @@ async function createOrUpdatePNLRecord(
       
       logger.info('✅ Updated P&L record', {
         project,
-        cheltuiala: cheltuialaName,
+        cheltuiala: displayName,
         category,
         sumaRON,
         sumaEURO: calculatedEURO
@@ -568,7 +576,7 @@ async function createOrUpdatePNLRecord(
       
       logger.info('✅ Created P&L record', {
         project,
-        cheltuiala: cheltuialaName,
+        cheltuiala: displayName,
         category,
         sumaRON,
         sumaEURO: calculatedEURO
@@ -577,9 +585,15 @@ async function createOrUpdatePNLRecord(
       stats.created++;
     }
   } catch (error) {
+    // Calculate displayName for error logging
+    const normalizedName = normalizeTeamLeaderName(cheltuialaName, category);
+    const displayNameForError = (category === PNL_CATEGORIES.TEAM_LEADERS && normalizedName !== cheltuialaName) 
+      ? normalizedName 
+      : cheltuialaName;
+    
     logger.error('Failed to create/update P&L record', {
       project,
-      cheltuiala: cheltuialaName,
+      cheltuiala: displayNameForError,
       category,
       error: error.message,
       stack: error.stack
@@ -589,41 +603,77 @@ async function createOrUpdatePNLRecord(
 }
 
 /**
+ * Normalize Team Leader names to prevent duplicates
+ * Handles formats like:
+ * - "TM Callers: Alexandru Prisiceanu" -> "Alexandru Prisiceanu"
+ * - "Teamleader Caller: Alexandru Prisiceanu (1 vanzari)" -> "Alexandru Prisiceanu"
+ * - "TM Setters: George Coapsi" -> "George Coapsi"
+ */
+function normalizeTeamLeaderName(cheltuialaName, category) {
+  if (category === PNL_CATEGORIES.TEAM_LEADERS) {
+    return cheltuialaName
+      .replace(/^TM\s+(Callers|Setters):\s*/i, '')
+      .replace(/^Teamleader\s+(Caller|Setter):\s*/i, '')
+      .replace(/\s*\(\d+\s+vanzari\)$/i, '')
+      .trim();
+  }
+  return cheltuialaName;
+}
+
+/**
  * Get P&L record by project, month, year, category, and cheltuiala name
+ * For Team Leader records, also searches using normalized name to find duplicates
  */
 async function getPNLRecord(project, month, year, category, cheltuialaName) {
   try {
     const results = [];
     
-    // Escape quotes in cheltuiala name for Airtable formula
-    const escapedCheltuiala = cheltuialaName.replace(/"/g, '\\"');
+    // For Team Leader records, try both exact match and normalized match
+    const searchNames = [cheltuialaName];
+    if (category === PNL_CATEGORIES.TEAM_LEADERS) {
+      const normalizedName = normalizeTeamLeaderName(cheltuialaName, category);
+      if (normalizedName !== cheltuialaName) {
+        searchNames.push(normalizedName);
+      }
+    }
     
-    await retryWithBackoff(async () => {
-      await base(TABLES.PNL)
-        .select({
-          filterByFormula: `AND(
-            {${FIELDS.PNL_PROJECT}} = "${project}",
-            {${FIELDS.PNL_MONTH}} = "${month}",
-            {${FIELDS.PNL_YEAR}} = ${year},
-            {${FIELDS.PNL_CATEGORY}} = "${category}",
-            {${FIELDS.PNL_CHELTUIALA}} = "${escapedCheltuiala}"
-          )`,
-          maxRecords: 1
-        })
-        .eachPage((records, fetchNextPage) => {
-          records.forEach(record => {
-            results.push({
-              id: record.id,
-              cheltuiala: record.get(FIELDS.PNL_CHELTUIALA),
-              category: record.get(FIELDS.PNL_CATEGORY),
-              suma: record.get(FIELDS.PNL_SUMA)
+    // Try each search name
+    for (const searchName of searchNames) {
+      // Escape quotes in cheltuiala name for Airtable formula
+      const escapedCheltuiala = searchName.replace(/"/g, '\\"');
+      
+      await retryWithBackoff(async () => {
+        await base(TABLES.PNL)
+          .select({
+            filterByFormula: `AND(
+              {${FIELDS.PNL_PROJECT}} = "${project}",
+              {${FIELDS.PNL_MONTH}} = "${month}",
+              {${FIELDS.PNL_YEAR}} = ${year},
+              {${FIELDS.PNL_CATEGORY}} = "${category}",
+              {${FIELDS.PNL_CHELTUIALA}} = "${escapedCheltuiala}"
+            )`,
+            maxRecords: 1
+          })
+          .eachPage((records, fetchNextPage) => {
+            records.forEach(record => {
+              results.push({
+                id: record.id,
+                cheltuiala: record.get(FIELDS.PNL_CHELTUIALA),
+                category: record.get(FIELDS.PNL_CATEGORY),
+                suma: record.get(FIELDS.PNL_SUMA)
+              });
             });
+            fetchNextPage();
           });
-          fetchNextPage();
-        });
-    });
+      });
+      
+      // If we found a match, return it
+      if (results.length > 0) {
+        return results[0];
+      }
+    }
     
-    return results.length > 0 ? results[0] : null;
+    return null;
   } catch (error) {
     logger.error('Failed to fetch P&L record', {
       project,

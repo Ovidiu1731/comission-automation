@@ -285,6 +285,7 @@ async function processSetterCallerCommission(commission, month, year) {
     // Prepare expense data
     // Note: 'name' already includes the month (e.g., "AbagiuMario - Octombrie")
     const expenseFields = {
+      [FIELDS.EXPENSE_NAME]: name, // Set Cheltuiala field to prevent empty P&L records
       [FIELDS.EXPENSE_DESCRIPTION]: name,
       [FIELDS.EXPENSE_PROJECT]: project,
       [FIELDS.EXPENSE_CATEGORY]: category,

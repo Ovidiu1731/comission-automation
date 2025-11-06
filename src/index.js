@@ -21,6 +21,7 @@ import { processStripeFees } from './services/stripeService.js';
 import { processFacebookAds } from './services/facebookAdsService.js';
 import { processCopywritingCommissions } from './services/copywritingService.js';
 import { processPNL } from './services/pnlService.js';
+import { runCleanup } from '../scripts/cleanup-airtable-data.js';
 
 // Load environment variables
 dotenv.config();
@@ -206,6 +207,31 @@ app.post('/webhook/cheltuieli-created', async (req, res) => {
 });
 
 /**
+ * Cleanup endpoint - fixes existing data inconsistencies
+ */
+app.post('/cleanup/data', async (req, res) => {
+  logger.info('Data cleanup endpoint called');
+  
+  try {
+    // Respond immediately
+    res.json({ 
+      success: true, 
+      message: 'Data cleanup started. Check logs for progress.' 
+    });
+    
+    // Run cleanup asynchronously
+    const results = await runCleanup();
+    
+    logger.info('Data cleanup completed', results);
+  } catch (error) {
+    logger.error('Data cleanup failed', {
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+/**
  * Initialize cron schedule
  */
 function initializeScheduler() {
@@ -245,7 +271,8 @@ function start() {
     logger.info('Available endpoints:', {
       health: `GET /health`,
       refreshAll: `POST /refresh/all (refreshes Cheltuieli + P&L)`,
-      cheltuieliCreated: `POST /webhook/cheltuieli-created`
+      cheltuieliCreated: `POST /webhook/cheltuieli-created`,
+      cleanup: `POST /cleanup/data (fixes data inconsistencies)`
     });
   });
   
