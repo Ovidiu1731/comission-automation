@@ -37,10 +37,7 @@ async function fixEmptyCheltuialaFields() {
     await retryWithBackoff(async () => {
       await base(TABLES.PNL)
         .select({
-          filterByFormula: `OR(
-            {${FIELDS.PNL_CHELTUIALA}} = "",
-            ISBLANK({${FIELDS.PNL_CHELTUIALA}})
-          )`,
+          filterByFormula: `{${FIELDS.PNL_CHELTUIALA}} = ""`,
           fields: [
             FIELDS.PNL_CHELTUIALA,
             FIELDS.PNL_DESCRIERE,
@@ -97,6 +94,63 @@ async function fixEmptyCheltuialaFields() {
         });
     });
     
+    // Also check records where Cheltuiala field might be missing (not in fields)
+    // We'll fetch all records and check programmatically
+    await retryWithBackoff(async () => {
+      await base(TABLES.PNL)
+        .select({
+          fields: [
+            FIELDS.PNL_CHELTUIALA,
+            FIELDS.PNL_DESCRIERE,
+            FIELDS.PNL_PROJECT,
+            FIELDS.PNL_MONTH,
+            FIELDS.PNL_CATEGORY
+          ]
+        })
+        .eachPage((records, fetchNextPage) => {
+          records.forEach(record => {
+            const cheltuiala = record.get(FIELDS.PNL_CHELTUIALA);
+            const descriere = record.get(FIELDS.PNL_DESCRIERE);
+            const project = record.get(FIELDS.PNL_PROJECT);
+            const month = record.get(FIELDS.PNL_MONTH);
+            const category = record.get(FIELDS.PNL_CATEGORY);
+            
+            // Check if Cheltuiala is empty or missing
+            if (!cheltuiala || cheltuiala.trim() === '') {
+              // Only update if Descriere has content and we haven't already added this record
+              if (descriere && descriere.trim() && !recordsToUpdate.find(r => r.id === record.id)) {
+                // Extract name from description
+                let newCheltuiala = descriere.trim();
+                
+                // Clean up common patterns
+                if (newCheltuiala.includes(' - ')) {
+                  // Extract name before " - Month"
+                  newCheltuiala = newCheltuiala.split(' - ')[0].trim();
+                }
+                
+                recordsToUpdate.push({
+                  id: record.id,
+                  fields: {
+                    [FIELDS.PNL_CHELTUIALA]: newCheltuiala
+                  }
+                });
+                
+                logger.info('Will update empty Cheltuiala (from all records check)', {
+                  recordId: record.id,
+                  project,
+                  month,
+                  category,
+                  oldCheltuiala: cheltuiala || '(empty)',
+                  newCheltuiala,
+                  sourceDescriere: descriere
+                });
+              }
+            }
+          });
+          fetchNextPage();
+        });
+    });
+    
     if (recordsToUpdate.length === 0) {
       logger.info('No records with empty Cheltuiala fields found');
       return { updated: 0 };
@@ -130,6 +184,8 @@ async function fixEmptyCheltuialaFields() {
 
 /**
  * Fix category inconsistency: "TeamLeaders" -> "Team Leader"
+ * NOTE: This requires API permission to update select options.
+ * If permission is insufficient, these records need manual update in Airtable UI.
  */
 async function fixCategoryInconsistency() {
   logger.info('=== Fixing Category Inconsistency ===');
@@ -172,26 +228,41 @@ async function fixCategoryInconsistency() {
     
     if (recordsToUpdate.length === 0) {
       logger.info('No records with "TeamLeaders" category found');
-      return { updated: 0 };
+      return { updated: 0, skipped: 0 };
     }
     
     logger.info(`Found ${recordsToUpdate.length} records to update`);
+    logger.warn('NOTE: Category updates require API permission to modify select options.');
+    logger.warn('If update fails, these records need manual update in Airtable UI.');
     
-    // Update in batches of 10
-    let updated = 0;
-    for (let i = 0; i < recordsToUpdate.length; i += 10) {
-      const batch = recordsToUpdate.slice(i, i + 10);
+    // Try to update, but don't fail if permission denied
+    try {
+      // Update in batches of 10
+      let updated = 0;
+      for (let i = 0; i < recordsToUpdate.length; i += 10) {
+        const batch = recordsToUpdate.slice(i, i + 10);
+        
+        await retryWithBackoff(async () => {
+          await base(TABLES.PNL).update(batch);
+        });
+        
+        updated += batch.length;
+        logger.info(`Updated ${updated}/${recordsToUpdate.length} records`);
+      }
       
-      await retryWithBackoff(async () => {
-        await base(TABLES.PNL).update(batch);
-      });
-      
-      updated += batch.length;
-      logger.info(`Updated ${updated}/${recordsToUpdate.length} records`);
+      logger.info('✅ Completed fixing category inconsistency', { updated });
+      return { updated, skipped: 0 };
+    } catch (error) {
+      if (error.message && error.message.includes('Insufficient permissions')) {
+        logger.warn('⚠️  Cannot update categories via API - insufficient permissions');
+        logger.warn('Please update these records manually in Airtable UI:');
+        recordsToUpdate.forEach(r => {
+          logger.warn(`  - Record ${r.id}: Change "TeamLeaders" to "Team Leader"`);
+        });
+        return { updated: 0, skipped: recordsToUpdate.length };
+      }
+      throw error;
     }
-    
-    logger.info('✅ Completed fixing category inconsistency', { updated });
-    return { updated };
   } catch (error) {
     logger.error('Failed to fix category inconsistency', {
       error: error.message,
@@ -211,10 +282,14 @@ async function mergeDuplicateTeamLeaderRecords() {
     // Get all Team Leader records
     const teamLeaderRecords = [];
     
+    // Get records with both "Team Leader" and "TeamLeaders" categories
     await retryWithBackoff(async () => {
       await base(TABLES.PNL)
         .select({
-          filterByFormula: `{${FIELDS.PNL_CATEGORY}} = "${PNL_CATEGORIES.TEAM_LEADERS}"`,
+          filterByFormula: `OR(
+            {${FIELDS.PNL_CATEGORY}} = "${PNL_CATEGORIES.TEAM_LEADERS}",
+            {${FIELDS.PNL_CATEGORY}} = "TeamLeaders"
+          )`,
           fields: [
             FIELDS.PNL_CHELTUIALA,
             FIELDS.PNL_PROJECT,
@@ -222,7 +297,8 @@ async function mergeDuplicateTeamLeaderRecords() {
             FIELDS.PNL_YEAR,
             FIELDS.PNL_SUMA_RON,
             FIELDS.PNL_SUMA_EURO,
-            FIELDS.PNL_DESCRIERE
+            FIELDS.PNL_DESCRIERE,
+            FIELDS.PNL_CATEGORY
           ]
         })
         .eachPage((records, fetchNextPage) => {
@@ -235,7 +311,8 @@ async function mergeDuplicateTeamLeaderRecords() {
               year: record.get(FIELDS.PNL_YEAR),
               sumaRON: record.get(FIELDS.PNL_SUMA_RON) || 0,
               sumaEURO: record.get(FIELDS.PNL_SUMA_EURO) || 0,
-              descriere: record.get(FIELDS.PNL_DESCRIERE)
+              descriere: record.get(FIELDS.PNL_DESCRIERE),
+              category: record.get(FIELDS.PNL_CATEGORY)
             });
           });
           fetchNextPage();
@@ -294,13 +371,21 @@ async function mergeDuplicateTeamLeaderRecords() {
         }
         
         // Update the kept record with normalized name and summed amounts
+        // Also update category to "Team Leader" if it's currently "TeamLeaders"
+        const updateFields = {
+          [FIELDS.PNL_CHELTUIALA]: group.normalizedName,
+          [FIELDS.PNL_SUMA_RON]: Math.round(totalRON * 100) / 100,
+          [FIELDS.PNL_SUMA_EURO]: Math.round(totalEURO * 100) / 100
+        };
+        
+        // Update category if it's "TeamLeaders" (but may fail due to permissions)
+        if (keepRecord.category === 'TeamLeaders') {
+          updateFields[FIELDS.PNL_CATEGORY] = PNL_CATEGORIES.TEAM_LEADERS;
+        }
+        
         recordsToUpdate.push({
           id: keepRecord.id,
-          fields: {
-            [FIELDS.PNL_CHELTUIALA]: group.normalizedName,
-            [FIELDS.PNL_SUMA_RON]: Math.round(totalRON * 100) / 100,
-            [FIELDS.PNL_SUMA_EURO]: Math.round(totalEURO * 100) / 100
-          }
+          fields: updateFields
         });
         
         logger.info('Will update kept record', {
@@ -381,10 +466,11 @@ async function runCleanup() {
     // Step 1: Fix empty Cheltuiala fields
     results.emptyCheltuiala = await fixEmptyCheltuialaFields();
     
-    // Step 2: Fix category inconsistency
+    // Step 2: Fix category inconsistency (may skip if no API permission)
     results.categoryFix = await fixCategoryInconsistency();
     
-    // Step 3: Merge duplicates (do this after category fix so all Team Leader records are found)
+    // Step 3: Merge duplicates
+    // Note: This works for both "Team Leader" and "TeamLeaders" categories
     results.duplicates = await mergeDuplicateTeamLeaderRecords();
     
     logger.info('=== Cleanup Complete ===', results);
