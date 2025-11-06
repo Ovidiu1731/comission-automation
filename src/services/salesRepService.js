@@ -26,17 +26,29 @@ import { isSalesRole, isValidExpenseAmount, isValidProject } from '../utils/vali
 import { logger } from '../utils/logger.js';
 
 /**
- * Process all Sales Rep commissions for ALL months
+ * Process Sales Rep commissions
+ * @param {string} targetMonthYear - Optional. Format: "Luna YYYY" (e.g., "Octombrie 2025"). If provided, only processes that month.
  */
-export async function processSalesRepCommissions() {
-  logger.info('Starting Sales Rep commission processing for ALL months');
+export async function processSalesRepCommissions(targetMonthYear = null) {
+  if (targetMonthYear) {
+    logger.info(`Starting Sales Rep commission processing for: ${targetMonthYear}`);
+  } else {
+    logger.info('Starting Sales Rep commission processing for ALL months');
+  }
   
   try {
     // Get all unique months with commissions
-    const months = await getAllMonthsWithCommissions();
+    let months = await getAllMonthsWithCommissions();
+    
+    // If targetMonthYear is provided, extract month and filter
+    if (targetMonthYear) {
+      const [targetMonth] = targetMonthYear.split(' ');
+      months = months.filter(month => month === targetMonth);
+      logger.info(`Filtered to single month: ${targetMonth}`);
+    }
     
     if (months.length === 0) {
-      logger.info('No months with commissions found');
+      logger.info('No months with commissions found', { targetMonthYear });
       return {
         processed: 0,
         created: 0,
@@ -65,7 +77,8 @@ export async function processSalesRepCommissions() {
       totalProcessed += result.processed;
     }
     
-    logger.info('Completed Sales Rep commission processing for all months', {
+    logger.info('Completed Sales Rep commission processing', {
+      targetMonthYear,
       monthsProcessed: months.length,
       totalProcessed,
       totalCreated,
@@ -84,7 +97,8 @@ export async function processSalesRepCommissions() {
   } catch (error) {
     logger.error('Failed to process Sales Rep commissions', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      targetMonthYear
     });
     throw error;
   }

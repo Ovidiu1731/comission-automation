@@ -20,14 +20,28 @@ const EUR_RON_RATE = 5.08;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Process P&L records for ALL months
+ * Process P&L records
  * Creates/updates P&L records showing revenue and expenses by project
+ * @param {string} targetMonthYear - Optional. Format: "Luna YYYY" (e.g., "Octombrie 2025"). If provided, only processes that month.
  */
-export async function processPNL() {
-  logger.info('=== Processing P&L Records for ALL months ===');
+export async function processPNL(targetMonthYear = null) {
+  if (targetMonthYear) {
+    logger.info(`=== Processing P&L Records for: ${targetMonthYear} ===`);
+  } else {
+    logger.info('=== Processing P&L Records for ALL months ===');
+  }
   
   try {
-    const monthYears = await getAllMonthYearsFromSales();
+    let monthYears;
+    
+    if (targetMonthYear) {
+      // Process only the specified month
+      monthYears = [targetMonthYear];
+      logger.info(`Processing single month: ${targetMonthYear}`);
+    } else {
+      // Process all months
+      monthYears = await getAllMonthYearsFromSales();
+    }
     
     if (monthYears.length === 0) {
       return {
@@ -56,12 +70,13 @@ export async function processPNL() {
       totalStats.errors += result.errors;
     }
     
-    logger.info('Completed P&L processing for all months', totalStats);
+    logger.info('Completed P&L processing', { targetMonthYear, ...totalStats });
     return totalStats;
   } catch (error) {
     logger.error('P&L processing failed', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      targetMonthYear
     });
     throw error;
   }

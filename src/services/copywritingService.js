@@ -131,13 +131,24 @@ function calculateProgressiveCommission(totalSalesRON) {
 }
 
 /**
- * Process copywriting commissions for ALL months
+ * Process copywriting commissions
+ * @param {string} targetMonthYear - Optional. Format: "Luna YYYY" (e.g., "Octombrie 2025"). If provided, only processes that month.
  */
-export async function processCopywritingCommissions() {
-  logger.info('=== Processing Copywriting Commissions for ALL months ===');
+export async function processCopywritingCommissions(targetMonthYear = null) {
+  if (targetMonthYear) {
+    logger.info(`=== Processing Copywriting Commissions for: ${targetMonthYear} ===`);
+  } else {
+    logger.info('=== Processing Copywriting Commissions for ALL months ===');
+  }
   
   try {
-    const monthYears = await getAllMonthYearsFromSales();
+    let monthYears = await getAllMonthYearsFromSales();
+    
+    // If targetMonthYear is provided, filter to only that month
+    if (targetMonthYear) {
+      monthYears = monthYears.filter(my => my === targetMonthYear);
+      logger.info(`Filtered to single month-year: ${targetMonthYear}`);
+    }
     
     if (monthYears.length === 0) {
       return {
@@ -175,12 +186,13 @@ export async function processCopywritingCommissions() {
       totalStats.totalSalesValue += result.totalSalesValue;
     }
     
-    logger.info('Completed copywriting processing for all months', totalStats);
+    logger.info('Completed copywriting processing', { targetMonthYear, ...totalStats });
     return totalStats;
   } catch (error) {
     logger.error('Failed to process copywriting commissions', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      targetMonthYear
     });
     throw error;
   }

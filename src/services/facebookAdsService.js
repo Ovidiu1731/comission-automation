@@ -383,14 +383,25 @@ function getLastDayOfMonth(year, month) {
 }
 
 /**
- * Main function to process Facebook Ads expenses for ALL months
+ * Main function to process Facebook Ads expenses
+ * @param {string} targetMonthYear - Optional. Format: "Luna YYYY" (e.g., "Octombrie 2025"). If provided, only processes that month.
  * @returns {Promise<Object>} - Processing statistics
  */
-export async function processFacebookAds() {
-  logger.info('=== Processing Facebook Ads Expenses for ALL months ===');
+export async function processFacebookAds(targetMonthYear = null) {
+  if (targetMonthYear) {
+    logger.info(`=== Processing Facebook Ads Expenses for: ${targetMonthYear} ===`);
+  } else {
+    logger.info('=== Processing Facebook Ads Expenses for ALL months ===');
+  }
   
   try {
-    const monthYears = await getAllMonthYearsFromSales();
+    let monthYears = await getAllMonthYearsFromSales();
+    
+    // If targetMonthYear is provided, filter to only that month
+    if (targetMonthYear) {
+      monthYears = monthYears.filter(my => my === targetMonthYear);
+      logger.info(`Filtered to single month-year: ${targetMonthYear}`);
+    }
     
     if (monthYears.length === 0) {
       return {
@@ -428,12 +439,13 @@ export async function processFacebookAds() {
       totalStats.errors += result.errors;
     }
     
-    logger.info('Completed Facebook Ads processing for all months', totalStats);
+    logger.info('Completed Facebook Ads processing', { targetMonthYear, ...totalStats });
     return totalStats;
   } catch (error) {
     logger.error('Facebook Ads processing failed', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      targetMonthYear
     });
     throw error;
   }

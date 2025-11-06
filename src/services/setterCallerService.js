@@ -28,17 +28,29 @@ import {
 import { logger } from '../utils/logger.js';
 
 /**
- * Process all Setter/Caller commissions for ALL months
+ * Process Setter/Caller commissions
+ * @param {string} targetMonthYear - Optional. Format: "Luna YYYY" (e.g., "Octombrie 2025"). If provided, only processes that month.
  */
-export async function processSetterCallerCommissions() {
-  logger.info('Starting Setter/Caller commission processing for ALL months');
+export async function processSetterCallerCommissions(targetMonthYear = null) {
+  if (targetMonthYear) {
+    logger.info(`Starting Setter/Caller commission processing for: ${targetMonthYear}`);
+  } else {
+    logger.info('Starting Setter/Caller commission processing for ALL months');
+  }
   
   try {
     // Get all unique months
-    const months = await getAllMonthsWithCommissions();
+    let months = await getAllMonthsWithCommissions();
+    
+    // If targetMonthYear is provided, extract month and filter
+    if (targetMonthYear) {
+      const [targetMonth] = targetMonthYear.split(' ');
+      months = months.filter(month => month === targetMonth);
+      logger.info(`Filtered to single month: ${targetMonth}`);
+    }
     
     if (months.length === 0) {
-      logger.info('No months with commissions found');
+      logger.info('No months with commissions found', { targetMonthYear });
       return {
         processed: 0,
         created: 0,
@@ -67,7 +79,8 @@ export async function processSetterCallerCommissions() {
       totalProcessed += result.processed;
     }
     
-    logger.info('Completed Setter/Caller commission processing for all months', {
+    logger.info('Completed Setter/Caller commission processing', {
+      targetMonthYear,
       monthsProcessed: months.length,
       totalProcessed,
       totalCreated,
@@ -86,7 +99,8 @@ export async function processSetterCallerCommissions() {
   } catch (error) {
     logger.error('Failed to process Setter/Caller commissions', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      targetMonthYear
     });
     throw error;
   }

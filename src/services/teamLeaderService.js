@@ -36,14 +36,26 @@ import {
 import { logger} from '../utils/logger.js';
 
 /**
- * Process all Team Leader commissions for ALL months
+ * Process Team Leader commissions
  * Uses monthly commission records from "Comisioane Lunare" as source of truth
+ * @param {string} targetMonthYear - Optional. Format: "Luna YYYY" (e.g., "Octombrie 2025"). If provided, only processes that month.
  */
-export async function processTeamLeaderCommissions() {
-  logger.info('=== Processing Team Leader Commissions for ALL months ===');
+export async function processTeamLeaderCommissions(targetMonthYear = null) {
+  if (targetMonthYear) {
+    logger.info(`=== Processing Team Leader Commissions for: ${targetMonthYear} ===`);
+  } else {
+    logger.info('=== Processing Team Leader Commissions for ALL months ===');
+  }
   
   try {
-    const months = await getAllMonthsWithCommissions();
+    let months = await getAllMonthsWithCommissions();
+    
+    // If targetMonthYear is provided, extract month and filter
+    if (targetMonthYear) {
+      const [targetMonth] = targetMonthYear.split(' ');
+      months = months.filter(month => month === targetMonth);
+      logger.info(`Filtered to single month: ${targetMonth}`);
+    }
     
     if (months.length === 0) {
       return {
@@ -87,12 +99,13 @@ export async function processTeamLeaderCommissions() {
       totalStats.alexandruPrisiceanuTotal += result.alexandruPrisiceanuTotal;
     }
     
-    logger.info('Completed Team Leader commission processing for all months', totalStats);
+    logger.info('Completed Team Leader commission processing', { targetMonthYear, ...totalStats });
     return totalStats;
   } catch (error) {
     logger.error('Failed to process Team Leader commissions', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      targetMonthYear
     });
     throw error;
   }

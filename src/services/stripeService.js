@@ -106,13 +106,24 @@ async function getStripePayments(monthYear) {
 }
 
 /**
- * Process all Stripe fee expenses for ALL months
+ * Process Stripe fee expenses
+ * @param {string} targetMonthYear - Optional. Format: "Luna YYYY" (e.g., "Octombrie 2025"). If provided, only processes that month.
  */
-export async function processStripeFees() {
-  logger.info('=== Processing Stripe Fees for ALL months ===');
+export async function processStripeFees(targetMonthYear = null) {
+  if (targetMonthYear) {
+    logger.info(`=== Processing Stripe Fees for: ${targetMonthYear} ===`);
+  } else {
+    logger.info('=== Processing Stripe Fees for ALL months ===');
+  }
   
   try {
-    const monthYears = await getAllMonthYearsFromSales();
+    let monthYears = await getAllMonthYearsFromSales();
+    
+    // If targetMonthYear is provided, filter to only that month
+    if (targetMonthYear) {
+      monthYears = monthYears.filter(my => my === targetMonthYear);
+      logger.info(`Filtered to single month-year: ${targetMonthYear}`);
+    }
     
     if (monthYears.length === 0) {
       return {
@@ -150,12 +161,13 @@ export async function processStripeFees() {
       totalStats.totalProcessed += result.totalProcessed;
     }
     
-    logger.info('Completed Stripe fee processing for all months', totalStats);
+    logger.info('Completed Stripe fee processing', { targetMonthYear, ...totalStats });
     return totalStats;
   } catch (error) {
     logger.error('Failed to process Stripe fees', {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
+      targetMonthYear
     });
     throw error;
   }
