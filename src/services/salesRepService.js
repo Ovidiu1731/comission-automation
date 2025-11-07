@@ -390,6 +390,7 @@ async function processSalesRepCommission(commission, month, year) {
     
     // Prepare expense data
     const expenseFields = {
+      [FIELDS.EXPENSE_NAME]: description, // Set Cheltuiala field to prevent empty P&L records
       [FIELDS.EXPENSE_DESCRIPTION]: description,
       [FIELDS.EXPENSE_PROJECT]: project,
       [FIELDS.EXPENSE_CATEGORY]: EXPENSE_CATEGORIES.REPRESENTATIVES,
